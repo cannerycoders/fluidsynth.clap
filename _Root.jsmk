@@ -1,0 +1,39 @@
+let appname = "fluidsynth.clap";
+let vers = "0.1.0"
+Project.EstablishDomain(appname, /(vs|gcc|clang)/,
+{
+    AppName: appname,
+    Package: `${appname}-${vers}`,
+    Version: vers,
+    Track: "beta",
+    CppStd: "c++17", // clap prefers modern c++
+});
+
+let platform = process.platform;
+let fluidSearchpaths = 
+{
+    win32: ["../../github.vcpkg/vcpkg/packages/fluidsynth_x64-windows/include"]
+}[platform]
+
+
+let m = Project.NewModule("pluginsrc");
+let defs = {
+    CLAP_PLUGINS_HEADLERS: null,
+    CLAP_NO_YAS: null
+};
+
+let t1 = m.NewTask("compile", "cpp->o", 
+{
+    inputs: Project.Glob("src/*.cpp"),
+    defs,
+    searchpaths: [
+        "src",
+        "clap/include",
+        "clap-helpers/include",
+        ...fluidSearchpaths,
+    ],
+});
+
+let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
+    inputs: t1.GetOutputs(),
+});

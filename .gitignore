@@ -1,0 +1,9 @@
+.vscode/*
+_built/
+_install/
+_package/
+*/_built/
+*/_install/
+*/_released/
+.ignore/
+.DS_Store
