@@ -46,6 +46,7 @@ FluidsynthPlugin::FluidsynthPlugin(
 {
     std::cerr << "fluid:pluginPath:" << pluginPath << "\n";
     m_sfont = "C:/sf2/FluidR3_GM.sf2";
+    m_verbosity = 0;
 }
 
 FluidsynthPlugin::~FluidsynthPlugin()
@@ -61,14 +62,21 @@ FluidsynthPlugin::~FluidsynthPlugin()
 bool
 FluidsynthPlugin::init() noexcept
 {
-    std::cerr << "fluid init\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid init\n";
     if(!m_settings)
     {
+        // https://www.fluidsynth.org/api/settings_synth.html
         m_settings = new_fluid_settings();
-        fluid_settings_setint(m_settings, "synth.verbose", 5);
+        if(m_verbosity > 1)
+        {
+            // per-channel config, per-note details
+            fluid_settings_setint(m_settings, "synth.verbose", 1);
+        }
         m_synth = new_fluid_synth(m_settings);
         m_fontId = fluid_synth_sfload(m_synth, m_sfont.c_str(), 1/*reset*/);
-        std::cerr << "fluid font " << m_sfont << " id:" << m_fontId << "\n";
+        if(m_verbosity > 0)
+            std::cerr << "fluid font " << m_sfont << " id:" << m_fontId << "\n";
     }
     return true;
 }
@@ -78,8 +86,11 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
                     uint32_t maxFrameCount) noexcept
 {
     assert(m_settings && m_synth);
-    std::cerr << "fluid activate " << sampleRate << " " 
+    if(m_verbosity > 0)
+    {
+        std::cerr << "fluid activate " << sampleRate << " " 
             << minFrameCount << "-" << maxFrameCount << "\n";
+    }
     fluid_settings_setnum(m_settings, "synth.sample-rate", sampleRate);
     return true;
 }
@@ -87,20 +98,23 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
 void 
 FluidsynthPlugin::deactivate() noexcept 
 {
-    std::cerr << "fluid deactivate\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid deactivate\n";
 }
 
 bool 
 FluidsynthPlugin::startProcessing() noexcept
 {
-    std::cerr << "fluid start processing\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid start processing\n";
     return true;
 }
 
 void 
 FluidsynthPlugin::stopProcessing() noexcept
 {
-    std::cerr << "fluid stop processing\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid stop processing\n";
 }
 
 clap_process_status 
@@ -160,7 +174,8 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
                 const clap_event_note_t *ev = (const clap_event_note_t *)hdr;
                 int ivel = (int) (127 * ev->velocity);
                 fluid_synth_noteon(m_synth, ev->channel, ev->key, ivel);
-                std::cerr << "fluid: note on " << ev->key << " " << ivel << "\n";
+                if(m_verbosity > 0)
+                    std::cerr << "fluid: note on " << ev->key << " " << ivel << "\n";
                 break;
             }
 
@@ -168,7 +183,8 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
             {
                 const clap_event_note_t *ev = (const clap_event_note_t *)hdr;
                 fluid_synth_noteoff(m_synth, ev->channel, ev->key);
-                std::cerr << "fluid: note off\n";
+                if(m_verbosity > 0)
+                    std::cerr << "fluid: note off " << ev->key << "\n";
                 break;
             }
 
@@ -210,7 +226,10 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_MIDI: 
             {
                 const clap_event_midi_t *ev = (const clap_event_midi_t *)hdr;
-                std::cerr << "TODO: handle MIDI event\n";
+                std::cout << "TODO: handle MIDI event 0x" 
+                     << std::hex << (int) ev->data[0] 
+                     << (int) ev->data[1] 
+                     << (int) ev->data[2] << "\n";
                 break;
             }
 
