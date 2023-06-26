@@ -10,11 +10,16 @@ Project.EstablishDomain(appname, /(vs|gcc|clang)/,
 });
 
 let platform = process.platform;
+let fpkg = "../../github.vcpkg/vcpkg/packages/fluidsynth_x64-windows";
 let fluidSearchpaths = 
 {
-    win32: ["../../github.vcpkg/vcpkg/packages/fluidsynth_x64-windows/include"]
+    win32: [`${fpkg}/include`]
 }[platform]
 
+let fluidLibs = 
+{
+    win32: [`${fpkg}/lib/fluidsynth.lib`]
+}[platform];
 
 let m = Project.NewModule("pluginsrc");
 let defs = {
@@ -36,4 +41,12 @@ let t1 = m.NewTask("compile", "cpp->o",
 
 let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
+    deps: fluidLibs
+});
+
+let installRoot = Project.EvaluateBuildVar("InstallDir");
+let t3 = m.NewTask("fluidsynthInstall", "install", {
+    inputs: t2.GetOutputs(),
+    installdir: "plugins",
+    installext: ".clap"
 });
