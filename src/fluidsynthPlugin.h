@@ -74,5 +74,6 @@ private:
     fluid_synth_t *m_synth;
     int m_fontId;
     std::string m_sfont;
+    int m_verbosity;
 
 };
