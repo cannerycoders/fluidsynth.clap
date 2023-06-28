@@ -5,17 +5,17 @@ for CLAP.
 
 ## parameters
 
-| id range | description                             | range |
-| :------- | :-------------------------------------- | :---- |
-| 0        | gain                                    | 0-10  |
-| 1-16     | program associated with midi chans 0-15 | 0-127 |
-| 17-32    | bank associated with midi chans 0-15    | 0-127 |
+| id range | description                             | value range | default |
+| :------- | :-------------------------------------- | :---- | :-- |
+| 0        | gain                                    | 0-10  | 0.2 |
+| 1-16     | program associated with midi chans 0-15 | 0-127 | 0 |
+| 17-32    | bank associated with midi chans 0-15    | 0-127 | 0 |
 
 ## presets
 
 To make any sound using fluidsynth you must loading a soundfont file. 
-A default soundfont may not be available on your system but woundfonts 
-can easily be found on the internet. The go-to starter soundfont 
+A default soundfont may not be available on your system but soundfont 
+files can easily be found on the internet. The go-to starter soundfont 
 is `FluidR3_GM.sf2`.
 
 We utilize CLAP's _preset extension_ to control soundfont loading.
@@ -28,6 +28,10 @@ load via your CLAP host application.
 We support the `clap.state` extension but since the state includes
 the filepath to the active soundfont state files may not be
 terribly portable.
+
+## todo
+
+* add parameters for chorus and reverb control
 
 ## see also
 
