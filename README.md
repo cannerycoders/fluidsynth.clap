@@ -14,6 +14,8 @@
   - [MacOS / Homebrew](#macos--homebrew)
   - [Linux](#linux-1)
 - [implementation notes](#implementation-notes)
+  - [todo](#todo)
+- [license](#license)
 
 ## intro
 
@@ -130,6 +132,26 @@ to compile and link our plugin code. This include with per-platform
 logic for locating the required fluidsynth libraries.  Since there are
 so few files it should be straightforward to build using your favorite 
 build system.
+
+### todo
+
+* Midi CCs
+
+* Pan control? (via MIDI?)
+
+* Most fluidsynth parameter changes are thread-safe but may cause
+glitches when performed during audio processing.  Value changes
+could (should?) trigger a reactivate request.
+
+## license
+
+Sourcecode provided herein is subject to the MIT license.  
+
+Fluidsynth is GPL2, license found [here](https://github.com/FluidSynth/fluidsynth/blob/master/LICENSE).
+Fluidsynth relies on other components subject to their own licenses.
+
+The Clap plugin API is MIT, licenses found [here](https://github.com/free-audio/clap/blob/main/LICENSE)
+and [here](https://github.com/free-audio/clap-helpers/blob/main/LICENSE)
 
 
 
