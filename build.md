@@ -2,6 +2,11 @@
 
 [Fluidsynth Build Notes](https://github.com/FluidSynth/fluidsynth/wiki/BuildingWithCMake)
 
+## TODO
+
+* preset loading to request sound-font. (and preset discovery?)
+* state saving
+
 ## Win32/MSVC/jsmk
 
 * need [vcpkg](https://github.com/microsoft/vcpkg) for glib, etc.
