@@ -1,9 +1,9 @@
 # fluidsynth.clap plugin 
 
 - [intro](#intro)
-- [parameters](#parameters)
 - [presets, soundfonts](#presets-soundfonts)
 - [state save/restore](#state-saverestore)
+- [parameters](#parameters)
 - [see also](#see-also)
 - [install for users](#install-for-users)
   - [Linux](#linux)
@@ -23,14 +23,41 @@
 the [fluidsynth soundfont synthesizer](https://fluidsynth.org) in the 
 form of a [CLAP plugin](https://github.com/free-audio/clap).
 
+## presets, soundfonts
+
+To make any sound using fluidsynth you must load a soundfont file. 
+A default soundfont may not be available on your system but soundfont 
+files can easily be found on the internet. The go-to starter soundfont 
+is `FluidR3_GM.sf2`. `fluidsynth.clap` looks for a default soundfont 
+according to these platform specific conventions:
+
+| platform | location                                               |
+| :------- | :----------------------------------------------------- |
+| Windows  | C:/Program Files/Common Files/Sounds/Banks/default.sf2 |
+| MacOS    | /Library/Audio/Sounds/Banks/default.sf2                |
+| Linux    | /usr/share/sounds/sf2/default.sf2                      |
+
+To override these defaults, we employ CLAP's _preset extension_ to allow you 
+to request an alternate soundfont file.  In other words, `.sf2` files *are* 
+the preset files compatible with this plugin.  To load a soundfont you should 
+be able to request a preset load via your favorite CLAP host application.
+
+## state save/restore
+
+We support the `clap.state` extension but since the state includes
+the filepath to the active soundfont state files may not be
+terribly portable.
+
+## parameters
+
 In typical usage, `fluidsynth` exposes a large collection of "canned" instrument
-sounds that are selected by the instrument index. Thus very little user-interface
-is required. Just select an instrument index in your sound font.
+sounds that are selected by the instrument index. Thus, very little user-interface
+is required. Just select instrument/bank indices in your sound font.
+
 The [General Midi standard](https://cannerycoders.com/docs/fiddle/reference/midiGM1.html)
 defines a standard mapping between an index and an instrument. Soundfonts
 with `GM` in their name purport to follow this convention.
 
-## parameters
 
 | id range | description                             | value range | default |
 | :------- | :-------------------------------------- | :---------- | :------ |
@@ -49,32 +76,7 @@ with `GM` in their name purport to follow this convention.
 | 32-47    | program associated with midi chans 0-15 | 0-127       | 0       |
 | 48-63    | bank associated with midi chans 0-15    | 0-127       | 0       |
 
-More details on these settings can be found [here](https://www.fluidsynth.org/api/settings_synth.html).
-
-## presets, soundfonts
-
-To make any sound using fluidsynth you must load a soundfont file. 
-A default soundfont may not be available on your system but soundfont 
-files can easily be found on the internet. The go-to starter soundfont 
-is `FluidR3_GM.sf2`. `fluidsynth.clap` looks for a default soundfont 
-according to these platform specific conventions:
-
-| platform | location                                               |
-| :------- | :----------------------------------------------------- |
-| Windows  | C:/Program Files/Common Files/Sounds/Banks/default.sf2 |
-| MacOS    | /Library/Audio/Sounds/Banks/default.sf2                |
-| Linux    | /usr/share/sounds/sf2/default.sf2                      |
-
-To override these defaults, we employ CLAP's _preset extension_ to request 
-an alternate soundfont file.  In other words, `.sf2` files *are* the preset 
-files compatible with this plugin.  To load a soundfont you should be able to 
-request a preset load via your favorite CLAP host application.
-
-## state save/restore
-
-We support the `clap.state` extension but since the state includes
-the filepath to the active soundfont state files may not be
-terribly portable.
+More details on these settings can be found [in the fluidsynth docs](https://www.fluidsynth.org/api/settings_synth.html).
 
 ## see also
 
@@ -128,18 +130,14 @@ in `dllMain.cpp`. This is where the primary dll entrypoint,
 `clap_plugin_entry` is found.
 
 We currently rely on a home-grown build system, [jsmk](https://github.com/dbadb/jsmk),
-to compile and link our plugin code. This include with per-platform 
+to compile and link our plugin code. This includes per-platform 
 logic for locating the required fluidsynth libraries.  Since there are
-so few files it should be straightforward to build using your favorite 
-build system.
+so few files in our implementation it should be straightforward to build 
+using your favorite build system.
 
 ### todo
 
-* Midi CCs
-
-* Pan control? (via MIDI?)
-
-* Most fluidsynth parameter changes are thread-safe but may cause
+* Most fluidsynth effects parameter changes are thread-safe but may cause
 glitches when performed during audio processing.  Value changes
 could (should?) trigger a reactivate request.
 

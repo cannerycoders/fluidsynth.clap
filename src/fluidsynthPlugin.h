@@ -88,6 +88,7 @@ public:
 
 private:
     void processEvent(const clap_event_header_t *hdr);
+    void setParamValue(int paramid, double value);
 
 private:
     fluid_settings_t *m_settings;
