@@ -1,24 +1,28 @@
 let appname = "fluidsynth.clap";
 let vers = "0.1.0"
-Project.EstablishDomain(appname, /(vs|gcc|clang)/,
+if(!Project.GetBuildVar("JSMK_NODOMAIN"))
 {
-    AppName: appname,
-    Package: `${appname}-${vers}`,
-    Version: vers,
-    Track: "beta",
-    CppStd: "c++17", // clap prefers modern c++
-});
+    Project.EstablishDomain(appname, /(vs|gcc|clang)/,
+    {
+        AppName: appname,
+        Package: `${appname}-${vers}`,
+        Version: vers,
+        Track: "beta",
+        CppStd: "c++17", // clap prefers modern c++
+    });
+}
 
 let platform = process.platform;
-let fpkg = "../../github.vcpkg/vcpkg/packages/fluidsynth_x64-windows";
-let fluidSearchpaths = 
-{
-    win32: [`${fpkg}/include`]
-}[platform]
-
+let CLAPROOT = Project.GetBuildVar("CLAP_ROOT") || ""; // are clap submodules local?
+let fpkg = {
+    win32: "_prebuilt/fluidsynth-2.3.3-win10-x64"
+    // win32: "_prebuilt/fluidsynth-dev-win10-x64"
+}[platform];
+let fluidSearchpaths = [`${fpkg}/include`];
 let fluidLibs = 
 {
-    win32: [`${fpkg}/lib/fluidsynth.lib`]
+    win32: [`${fpkg}/lib/libfluidsynth.dll.a`]
+    // win32: [`${fpkg}/lib/fluidsynth.lib`]
 }[platform];
 
 let m = Project.NewModule("pluginsrc");
@@ -33,8 +37,8 @@ let t1 = m.NewTask("compile", "cpp->o",
     defs,
     searchpaths: [
         "src",
-        "clap/include",
-        "clap-helpers/include",
+        `${CLAPROOT}clap/include`,
+        `${CLAPROOT}clap-helpers/include`,
         ...fluidSearchpaths,
     ],
 });
@@ -44,9 +48,18 @@ let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     deps: fluidLibs
 });
 
+let installdir = "resources/plugins/fluidsynth";
 let installRoot = Project.EvaluateBuildVar("InstallDir");
 let t3 = m.NewTask("fluidsynthInstall", "install", {
-    inputs: t2.GetOutputs(),
-    installdir: "plugins",
-    installext: ".clap"
+    inputs: t2.GetOutputs(), 
+    installext: ".clap",
+    installdir, 
 });
+
+if(platform == "win32")
+{
+    let t4 = m.NewTask("fluidsynthInstallDLLs", "install", {
+                inputs: Project.Glob(`${fpkg}/bin/*.dll`),
+                installdir,
+            });
+}

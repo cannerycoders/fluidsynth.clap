@@ -114,13 +114,13 @@ private:
         k_ChorusSpeed, // Hz (.29 - 5)
         k_ChorusDepth, // ms (0 - 21)
         k_ChorusMod,  // sine or triangle
-        k_lastIndexedParam,
+        k_indexedParamCount,
 
         k_Prog0 = 32,   // programs associated with 16 midi channels
 
         k_Bank0 = 48,   // banks associated with 16 midi channels
 
-        k_numParams = k_lastIndexedParam + 32
+        k_numParams = k_indexedParamCount + 32
     };
     float m_gain = .2f;
 

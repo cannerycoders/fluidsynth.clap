@@ -1,5 +1,6 @@
 .vscode/
 _built/
+_prebuilt/
 _install/
 _package/
 */_built/
