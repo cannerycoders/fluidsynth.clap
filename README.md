@@ -106,7 +106,8 @@ distribution or build/install them following the developer procedure below.
 
 ### Windows / VCPKG
 
-> `git clone https://github/microsoft/vcpkg`
+> `git clone https://github/microsoft/vcpkg` (etc)
+> `vcpkg install fluidsynth`
 
 ### MacOS / Homebrew
 
@@ -114,7 +115,7 @@ distribution or build/install them following the developer procedure below.
 
 ### Linux
 
-> `sudo apt-get install`
+> `sudo apt-get install libfluidsynth-dev`
 
 ## implementation notes
 

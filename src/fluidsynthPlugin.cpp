@@ -45,13 +45,15 @@ FluidsynthPlugin::FluidsynthPlugin(
         m_synth(nullptr),
         m_pluginPath(pluginPath)
 {
+
     #ifdef _WIN32
-    m_sfontPath = "C:/Program Files/Common Files/Sounds/Banks/default.sf2";
+    m_pluginPresetDir = "C:/Program Files/Common Files/Sounds/Banks";
     #elif defined(__APPLE__)
-    m_sfontPath = "/Library/Audio/Sounds/Banks/default.sf2";
+    m_pluginPresetDir = "/Library/Audio/Sounds/Banks";
     #else
-    m_sfontPath = "/usr/share/sounds/sf2/default.sf2";
+    m_pluginPresetDir = "/usr/share/sounds/sf2";
     #endif
+    m_sfontPath = m_pluginPresetDir / "default.sf2";
     m_verbosity = 0;
 }
 
@@ -222,7 +224,7 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_PARAM_VALUE: 
             {
                 const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
-                std::cerr << "fluid.set param " << ev->param_id << "\n";
+                // std::cerr << "fluid.set param " << ev->param_id << "\n";
                 if(ev->param_id == k_Gain)
                 {
                     m_gain = (float) ev->value;
@@ -230,8 +232,38 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
                         fluid_synth_set_gain(m_synth, m_gain);
                 }
                 else
+                if(ev->param_id <= k_RevLevel)
                 {
-                    std::cerr << "TODO: handle parameter change for "
+
+                }
+                else
+                if(ev->param_id <= k_ChorusMod)
+                {
+
+                }
+                else
+                if(ev->param_id >= k_Bank0 && ev->param_id < (k_Bank0 + 16))
+                {
+                    int chan = ev->param_id - k_Bank0;
+                    int nbank = (int) ev->value;
+                    int fontId, prog, obank;
+                    fluid_synth_get_program(m_synth, chan, &fontId, &obank, &prog);
+                    fluid_synth_program_select(m_synth, chan, fontId,
+                                                nbank, prog);
+                }
+                else
+                if(ev->param_id >= k_Prog0 && ev->param_id < k_Bank0)
+                {
+                    int chan = ev->param_id - k_Prog0;
+                    int nprog = (int) ev->value;
+                    int fontId, bank, oprog;
+                    fluid_synth_get_program(m_synth, chan, &fontId, &bank, &oprog);
+                    fluid_synth_program_select(m_synth, chan, fontId,
+                                             bank, nprog);
+                }
+                else
+                {
+                    std::cerr << "fluid ERROR: invalid parameter change for "
                         << ev->param_id << "\n";
                 }
                 break;
@@ -453,25 +485,24 @@ FluidsynthPlugin::paramsCount() const noexcept
 bool 
 FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
 {
-    if(paramIndex < k_lastIndexedParam)
+    if(paramIndex < k_indexedParamCount)
     {
         *info = s_fluidParams[paramIndex];
         return true;
     }
     else
     {
-        if(paramIndex < k_Prog0 || paramIndex >= k_Bank0 + 16)
-            return false;
-        if(paramIndex >= k_Prog0 && paramIndex < k_Bank0)
+        int relIndex = paramIndex - k_indexedParamCount;
+        if(relIndex < 16)
         {
-            int chan = paramIndex - k_Prog0;
-            *info = s_fluidParams[k_lastIndexedParam];
+            int chan = relIndex;
+            *info = s_fluidParams[k_indexedParamCount];
             info->id += chan;
         }
         else // if(paramIndex >= k_Bank0 && paramIndex < k_Bank0+16)
         {
-            int chan = paramIndex - k_Bank0;
-            *info = s_fluidParams[k_lastIndexedParam+1];
+            int chan = (relIndex - 16);
+            *info = s_fluidParams[k_indexedParamCount+1];
             info->id += chan;
         }
         return true;
@@ -489,14 +520,17 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
 bool 
 FluidsynthPlugin::paramsValue(clap_id paramId, double *value) noexcept
 {
-    if(paramId >= k_numParams) return false;
-
-    switch(paramId)
-    {
-    case k_Gain:
+    if(paramId == k_Gain)
         *value = m_gain;
-        break;
-    default:
+    else
+    if(paramId <= k_RevLevel)
+    {
+    }
+    else
+    if(paramId <= k_ChorusMod)
+    {}
+    else
+    {
         if(m_synth)
         {
             int chan;
@@ -514,7 +548,6 @@ FluidsynthPlugin::paramsValue(clap_id paramId, double *value) noexcept
         }
         else
             *value = 0;
-        break;
     }
     return true;
 }
@@ -587,6 +620,18 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
 {
     if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE)
     {
+        std::filesystem::path fp(location);
+        std::string tmp;
+        if(!std::filesystem::exists(fp) && fp.is_relative())
+        {
+            // try our default location 
+            std::filesystem::path nfp = m_pluginPresetDir / fp;
+            if(std::filesystem::exists(nfp))
+            {
+                tmp = nfp.generic_string();
+                location = tmp.c_str();
+            }
+        }
         int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
         if(id == FLUID_FAILED)
         {
@@ -595,6 +640,8 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
         }
         else
         {
+            if(m_verbosity)
+                std::cerr << "fluidsynth loaded " << location << "\n";
             m_sfontPath = location;
             m_fontId = id;
             return true;
