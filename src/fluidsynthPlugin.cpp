@@ -5,18 +5,6 @@
 
 #include <iostream>
 
-/* minimal lifecycle 
-    fluid init
-    fluid start processing
-    fluid-synth input event1
-    (repeat)
-    (issue quit)
-    ####### STOPING ENGINE #########
-    fluid stop processing
-    fluid deactivate
-        ####### ENGINE STOPPED #########
-*/
-
 static char const *s_features[] = 
 {
     CLAP_PLUGIN_FEATURE_INSTRUMENT, 
