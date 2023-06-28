@@ -6,15 +6,16 @@
 - [parameters](#parameters)
 - [see also](#see-also)
 - [install for users](#install-for-users)
-  - [Linux](#linux)
-  - [Windows](#windows)
-  - [MacOS](#macos)
+  - [Windows Install](#windows-install)
+  - [Linux Install](#linux-install)
+  - [MacOS Install](#macos-install)
 - [install for developers](#install-for-developers)
   - [Windows / VCPKG](#windows--vcpkg)
   - [MacOS / Homebrew](#macos--homebrew)
-  - [Linux](#linux-1)
+  - [Linux](#linux)
 - [implementation notes](#implementation-notes)
   - [todo](#todo)
+- [buyer beware](#buyer-beware)
 - [license](#license)
 
 ## intro
@@ -87,22 +88,46 @@ More details on these settings can be found [in the fluidsynth docs](https://www
 
 ## install for users
 
-This plugin has dependencies on the `dll`s that implement fluidsynth and 
-obtaining these depend upon the platform (OS plus architecture).
+This plugin has dependencies on the `dlls` that implement fluidsynth, 
+obtaining them depends upon the platform (OS plus architecture).
+Our intention is to make the entire collection of .clap and .dll/.so files
+available via our releases tags. This means that in order to use this
+plugin you need only download the latest .zip file and decompress it
+into a standard CLAP location (system or user).
 
-### Linux 
-Linux users have the easiest job because fluidsynth is widely available as 
-a linux package.  For example on debian: 
+Depending on your CLAP host and platform security settings, you may still need
+to add the location of `fluidsynth.clap` to `PATH`, and/or 
+`LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH`.
 
-> `sudo apt-get install fluidsynth fluid-soundfont-gm`
+If you wish to build or download fluidsynth yourself, please proceed to
+the platform-specific instructions that follow.
 
-### Windows
+| platform | type   | typical path                       | semantic           |
+| :------- | :----- | :--------------------------------- | :----------------- |
+| windows  | system | c:/Program Files/Common Files/CLAP | COMMONPROGRAMFILES |
+| windows  | user   | $HOME/AppData/Local/Programs/CLAP  | LOCALAPPDATA       |
+| macos    | system | /Library/Audio/Plug-Ins/CLAP       |                    |
+| macos    | user   | $HOME/Library/Audio/Plug-Ins/CLAP  |                    |
+| linux    | system | /usr/lib/clap                      |                    |
+| linux    | user   | $HOME/.clap                        |                    |
+
+### Windows Install
+
 Windows users can download a pre-compiled collection of fluidsynth
 runtime components [here](https://github.com/FluidSynth/fluidsynth/releases).
 The .zip file is organized in linux fashion with `bin`, `lib` and `include`
-directories.
+directories.  In order for fluidsynth.clap to find the .dll files you may
+need to add the install location to your PATH.
 
-### MacOS
+### Linux Install
+Linux users have the easiest job because fluidsynth is widely available as 
+a linux package.  For example on debian: 
+
+```sh
+sudo apt-get install fluidsynth fluid-soundfont-gm
+```
+
+### MacOS Install
 MacOS users either obtain the fluidsynth dlls with this fluidsynth plugin 
 distribution or build/install them following the developer procedure below.
 
@@ -110,16 +135,22 @@ distribution or build/install them following the developer procedure below.
 
 ### Windows / VCPKG
 
-> `git clone https://github/microsoft/vcpkg` (etc)
-> `vcpkg install fluidsynth`
+```sh
+git clone https://github/microsoft/vcpkg (etc)
+vcpkg install fluidsynth`
+```
 
 ### MacOS / Homebrew
 
-> `brew install fluidsynth`
+```sh
+brew install fluidsynth`
+```
 
 ### Linux
 
-> `sudo apt-get install libfluidsynth-dev`
+```sh
+sudo apt-get install libfluidsynth-dev`
+```
 
 ## implementation notes
 
@@ -141,9 +172,16 @@ using your favorite build system.
 glitches when performed during audio processing.  Value changes
 could (should?) trigger a reactivate request.
 
+## buyer beware
+
+We offer no warranties, guarantees or commitments. Watch out for sharp
+edges, this is not a toy, though it may appear so.
+
 ## license
 
 Sourcecode provided herein is subject to the MIT license.  
+
+Binaries provide via releases may include components with different licenses.
 
 Fluidsynth is GPL2, license found [here](https://github.com/FluidSynth/fluidsynth/blob/master/LICENSE).
 Fluidsynth relies on other components subject to their own licenses.
