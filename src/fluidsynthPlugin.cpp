@@ -213,47 +213,7 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
             {
                 const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
                 // std::cerr << "fluid.set param " << ev->param_id << "\n";
-                if(ev->param_id == k_Gain)
-                {
-                    m_gain = (float) ev->value;
-                    if(m_synth)
-                        fluid_synth_set_gain(m_synth, m_gain);
-                }
-                else
-                if(ev->param_id <= k_RevLevel)
-                {
-
-                }
-                else
-                if(ev->param_id <= k_ChorusMod)
-                {
-
-                }
-                else
-                if(ev->param_id >= k_Bank0 && ev->param_id < (k_Bank0 + 16))
-                {
-                    int chan = ev->param_id - k_Bank0;
-                    int nbank = (int) ev->value;
-                    int fontId, prog, obank;
-                    fluid_synth_get_program(m_synth, chan, &fontId, &obank, &prog);
-                    fluid_synth_program_select(m_synth, chan, fontId,
-                                                nbank, prog);
-                }
-                else
-                if(ev->param_id >= k_Prog0 && ev->param_id < k_Bank0)
-                {
-                    int chan = ev->param_id - k_Prog0;
-                    int nprog = (int) ev->value;
-                    int fontId, bank, oprog;
-                    fluid_synth_get_program(m_synth, chan, &fontId, &bank, &oprog);
-                    fluid_synth_program_select(m_synth, chan, fontId,
-                                             bank, nprog);
-                }
-                else
-                {
-                    std::cerr << "fluid ERROR: invalid parameter change for "
-                        << ev->param_id << "\n";
-                }
+                this->setParamValue(ev->param_id, ev->value);
                 break;
             }
 
@@ -274,12 +234,40 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_MIDI: 
             {
                 const clap_event_midi_t *ev = (const clap_event_midi_t *)hdr;
-                std::cout << "TODO: handle MIDI event 0x" 
-                     << std::setfill('0') << std::setw(2)
-                     << std::hex << (int) ev->data[0] 
-                     << (int) ev->data[1] 
-                     << (int) ev->data[2] << "\n";
-                break;
+                unsigned char cmd = 0xF0 & ev->data[0];
+                int chan = 0x0F & ev->data[0];
+                switch(cmd)
+                {
+                // expect 0x80 and 0x90 to be handled by noteOn/Off
+                case 0xa0: // polyphonic aftertouch
+                    fluid_synth_key_pressure(m_synth, chan, ev->data[1], ev->data[2]);
+                    break;
+                case 0xb0: // cc
+                    fluid_synth_cc(m_synth, chan, ev->data[1], ev->data[2]);
+                    break;
+                case 0xc0: // program change
+                    fluid_synth_program_change(m_synth, chan, ev->data[1]);
+                    break;
+                case 0xd0: // _channel_ aftertouch / pressure
+                    fluid_synth_channel_pressure(m_synth, chan, ev->data[1]);
+                    break;
+                case 0xe0:  // pitch wheel
+                    {
+                        int lsb = ev->data[1] & 0x7F;
+                        int msb = ev->data[2] & 0x7F;
+                        int pitchbend = lsb + (msb << 7);
+                        fluid_synth_pitch_bend(m_synth, chan, pitchbend);
+                    }
+                    break;
+                default:
+                    std::cout << "TODO: handle MIDI event 0x" 
+                        << std::setfill('0') << std::setw(2)
+                        << std::hex << (int) ev->data[0] 
+                        << (int) ev->data[1] 
+                        << (int) ev->data[2] << "\n";
+                    break;
+                }
+                break; // CLAP_EVENT_MIDI
             }
 
         case CLAP_EVENT_MIDI_SYSEX: 
@@ -506,30 +494,82 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
 /// - send automation points during clap_plugin_params.flush(), 
 //    for parameter changes without processing audio.
 bool 
-FluidsynthPlugin::paramsValue(clap_id paramId, double *value) noexcept
+FluidsynthPlugin::paramsValue(clap_id paramid, double *value) noexcept
 {
-    if(paramId == k_Gain)
+    if(paramid == k_Gain)
         *value = m_gain;
     else
-    if(paramId <= k_RevLevel)
+    if(paramid <= k_RevLevel)
     {
+        switch(paramid)
+        {
+        case k_Reverb: // on-off
+            *value = 1; // fluid_synth_get_reverb_on(m_synth);
+            break; 
+        case k_RevRoomsize: // 0-1.2
+            fluid_synth_get_reverb_group_roomsize(m_synth, -1, value);
+            break; 
+        case k_RevDamping:  // 0-1
+            fluid_synth_get_reverb_group_damp(m_synth, -1, value);
+            break; 
+        case k_RevWidth:    // 0-100
+            fluid_synth_get_reverb_group_width(m_synth, -1, value);
+            break; 
+        case k_RevLevel:
+            fluid_synth_get_reverb_group_level(m_synth, 1, value);
+            break;
+        default:
+            assert(0);
+        }
     }
     else
-    if(paramId <= k_ChorusMod)
-    {}
+    if(paramid <= k_ChorusMod)
+    {
+        switch(paramid)
+        {
+        case k_Chorus: // on-off
+            *value = 1; // fluid_synth_get_reverb_on(m_synth);
+            break;
+        case k_ChorusNR: // 0-99, voice-count
+            {
+                int nr;
+                fluid_synth_get_chorus_group_nr(m_synth, -1, &nr);
+                *value = nr;
+            }
+            break;
+        case k_ChorusLevel: // 0-1
+            fluid_synth_get_chorus_group_level(m_synth, -1, value);
+            break;
+        case k_ChorusSpeed: // Hz (.29 - 5)
+            fluid_synth_get_chorus_group_speed(m_synth, -1, value);
+            break;
+        case k_ChorusDepth: // ms (0 - 21)
+            fluid_synth_get_chorus_group_depth(m_synth, -1, value);
+            break;
+        case k_ChorusMod:  // sine or triangle
+            {
+                int i;
+                fluid_synth_get_chorus_group_type(m_synth, -1, &i);
+                *value = i;
+            }
+            break;
+        default:
+            assert(0);
+        }
+    }
     else
     {
         if(m_synth)
         {
             int chan;
-            if(paramId >= k_Bank0)
-                chan = paramId - k_Bank0;
+            if(paramid >= k_Bank0)
+                chan = paramid - k_Bank0;
             else
-                chan = paramId - k_Prog0;
+                chan = paramid - k_Prog0;
             
             int fontId, bank, prog;
             fluid_synth_get_program(m_synth, chan, &fontId, &bank, &prog);
-            if(paramId >= k_Bank0)
+            if(paramid >= k_Bank0)
                 *value = bank;
             else
                 *value = prog;
@@ -540,15 +580,102 @@ FluidsynthPlugin::paramsValue(clap_id paramId, double *value) noexcept
     return true;
 }
 
+void
+FluidsynthPlugin::setParamValue(int paramid, double value)
+{
+    if(paramid == k_Gain)
+    {
+        m_gain = (float) value;
+        if(m_synth)
+            fluid_synth_set_gain(m_synth, m_gain);
+    }
+    else
+    if(paramid <= k_RevLevel)
+    {
+        switch(paramid)
+        {
+        case k_Reverb: // on-off
+            fluid_synth_reverb_on(m_synth, -1, (int) value);
+            break; 
+        case k_RevRoomsize: // 0-1.2
+            fluid_synth_set_reverb_group_roomsize(m_synth, -1, value);
+            break; 
+        case k_RevDamping:  // 0-1
+            fluid_synth_set_reverb_group_damp(m_synth, -1, value);
+            break; 
+        case k_RevWidth:    // 0-100
+            fluid_synth_set_reverb_group_width(m_synth, -1, value);
+            break; 
+        case k_RevLevel:
+            fluid_synth_set_reverb_group_level(m_synth, 1, value);
+            break;
+        default:
+            assert(0);
+        }
+    }
+    else
+    if(paramid <= k_ChorusMod)
+    {
+        switch(paramid)
+        {
+        case k_Chorus: // on-off
+            fluid_synth_chorus_on(m_synth, -1, (int) value);
+            break;
+        case k_ChorusNR: // 0-99, voice-count
+            fluid_synth_set_chorus_group_nr(m_synth, -1, (int) value);
+            break;
+        case k_ChorusLevel: // 0-1
+            fluid_synth_set_chorus_group_level(m_synth, -1, value);
+            break;
+        case k_ChorusSpeed: // Hz (.29 - 5)
+            fluid_synth_set_chorus_group_speed(m_synth, -1, value);
+            break;
+        case k_ChorusDepth: // ms (0 - 21)
+            fluid_synth_set_chorus_group_depth(m_synth, -1, value);
+            break;
+        case k_ChorusMod:  // sine or triangle
+            fluid_synth_set_chorus_group_type(m_synth, -1, (int) value);
+            break;
+        default:
+            assert(0);
+        }
+    }
+    else
+    if(paramid >= k_Bank0 && paramid < (k_Bank0 + 16))
+    {
+        int chan = paramid - k_Bank0;
+        int nbank = (int) value;
+        int fontId, prog, obank;
+        fluid_synth_get_program(m_synth, chan, &fontId, &obank, &prog);
+        fluid_synth_program_select(m_synth, chan, fontId,
+                                    nbank, prog);
+    }
+    else
+    if(paramid >= k_Prog0 && paramid < k_Bank0)
+    {
+        int chan = paramid - k_Prog0;
+        int nprog = (int) value;
+        int fontId, bank, oprog;
+        fluid_synth_get_program(m_synth, chan, &fontId, &bank, &oprog);
+        fluid_synth_program_select(m_synth, chan, fontId,
+                                    bank, nprog);
+    }
+    else
+    {
+        std::cerr << "fluid ERROR: invalid parameter change for "
+            << paramid << "\n";
+    }
+}
+
 bool 
-FluidsynthPlugin::paramsValueToText(clap_id paramId, double value, char *display, 
+FluidsynthPlugin::paramsValueToText(clap_id paramid, double value, char *display, 
     uint32_t size) noexcept
 {
     return false;
 }
 
 bool 
-FluidsynthPlugin::paramsTextToValue(clap_id paramId, const char *display,   
+FluidsynthPlugin::paramsTextToValue(clap_id paramid, const char *display,   
                                    double *value) noexcept
 {
     return false;
@@ -574,29 +701,7 @@ FluidsynthPlugin::paramsFlush(const clap_input_events *in_events,
             if(hdr->type == CLAP_EVENT_PARAM_VALUE)
             {
                 const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
-                switch(ev->param_id)
-                {
-                case k_Gain:
-                    m_gain = (float) ev->value;
-                    fluid_synth_set_gain(m_synth, m_gain);
-                    break;
-                default:
-                    {
-                    int chan, fontId, bank, prog;
-                    if(ev->param_id >= k_Bank0)
-                        chan = ev->param_id - k_Bank0;
-                    else
-                        chan = ev->param_id - k_Prog0;
-                    fluid_synth_get_program(m_synth, chan, &fontId, &bank, &prog);
-                    if(ev->param_id >= k_Bank0)
-                        fluid_synth_program_select(m_synth, chan, fontId,
-                                    (int)ev->value, prog);
-                    else
-                        fluid_synth_program_select(m_synth, chan, fontId,
-                                    bank, (int)ev->value);
-                    break;
-                    }
-                }
+                this->setParamValue(ev->param_id, ev->value);
             }
         }
     }
