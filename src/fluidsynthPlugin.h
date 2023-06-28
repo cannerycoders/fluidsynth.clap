@@ -6,8 +6,10 @@
 #include <clap/helpers/misbehaviour-handler.hh>
 #include <clap/helpers/checking-level.hh>
 #include <string>
+#include <filesystem> // c++17 dependency
 
 /* ---------------------------------------------------------------------- */
+// our instances are created by the factory in dllMain
 class FluidsynthPlugin : public clap::helpers::Plugin<
         clap::helpers::MisbehaviourHandler::Terminate,
         clap::helpers::CheckingLevel::Maximal>
@@ -45,9 +47,7 @@ public:
         return true;
     }
 
-    //------------------------//
-    // clap_plugin_note_ports //
-    //------------------------//
+    /* note ports ---------------------------------------------------------- */
     bool implementsNotePorts() const noexcept override { return true; }
     uint32_t notePortsCount(bool isInput) const noexcept override
         { 
@@ -66,6 +66,26 @@ public:
             return false;
     }
 
+    /* -- params ----------------------------------------------------- */
+    bool implementsParams() const noexcept override { return true; }
+    uint32_t paramsCount() const noexcept override;
+    bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override; 
+    bool paramsValue(clap_id paramId, double *value) noexcept override;
+    bool paramsValueToText(clap_id paramId, double value, char *display, uint32_t size) noexcept override; 
+    bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override;
+    void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override;
+
+    /* -- presets ----------------------------------------------------- */
+    bool implementsPresetLoad() const noexcept override { return true; }
+    bool presetLoadFromLocation(uint32_t location_kind,
+                                const char *location,
+                                const char *load_key) noexcept override;
+
+    /* -- state ----------------------------------------------------- */
+    bool implementsState() const noexcept override { return true; }
+    bool stateSave(const clap_ostream *stream) noexcept override; 
+    bool stateLoad(const clap_istream *stream) noexcept override; 
+
 private:
     void processEvent(const clap_event_header_t *hdr);
 
@@ -73,7 +93,19 @@ private:
     fluid_settings_t *m_settings;
     fluid_synth_t *m_synth;
     int m_fontId;
-    std::string m_sfont;
     int m_verbosity;
+    std::filesystem::path m_pluginPath;
+    std::filesystem::path m_pluginPresetDir;
+    std::filesystem::path m_sfontPath;
 
+    enum paramId
+    {
+        k_Gain = 0,
+        k_Prog0 = 1,       // programs associated with 16 midi channels
+        k_Bank0 = 17,      // banks associated with 16 midi channels
+        k_numParams = 33 
+    };
+    float m_gain = .2f;
+
+    static clap_param_info s_fluidParams[];
 };
