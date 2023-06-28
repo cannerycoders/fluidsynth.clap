@@ -101,9 +101,26 @@ private:
     enum paramId
     {
         k_Gain = 0,
-        k_Prog0 = 1,       // programs associated with 16 midi channels
-        k_Bank0 = 17,      // banks associated with 16 midi channels
-        k_numParams = 33 
+
+        k_Reverb, // on-off
+        k_RevRoomsize, // 0-1.2
+        k_RevDamping,  // 0-1
+        k_RevWidth,    // 0-100
+        k_RevLevel,    // 0-1
+
+        k_Chorus, // on-off
+        k_ChorusNR, // 0-99, voice-count
+        k_ChorusLevel, // 0-1
+        k_ChorusSpeed, // Hz (.29 - 5)
+        k_ChorusDepth, // ms (0 - 21)
+        k_ChorusMod,  // sine or triangle
+        k_lastIndexedParam,
+
+        k_Prog0 = 32,   // programs associated with 16 midi channels
+
+        k_Bank0 = 48,   // banks associated with 16 midi channels
+
+        k_numParams = k_lastIndexedParam + 32
     };
     float m_gain = .2f;
 

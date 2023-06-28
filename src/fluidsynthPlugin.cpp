@@ -318,26 +318,126 @@ FluidsynthPlugin::extension(const char *id) noexcept
 FluidsynthPlugin::s_fluidParams[] =
 {
     {
-       0, // gain id
-       CLAP_PARAM_IS_AUTOMATABLE, // flags
-       nullptr, 
-       "gain",
-       "",
-       0., 10., .2,
+        k_Gain,
+        CLAP_PARAM_IS_AUTOMATABLE, // flags
+        nullptr, 
+        "gain",
+        "",
+        0., 10., .2,
+    },
+
+    /* reverb -------------------------- */
+    {
+        k_Reverb,
+        CLAP_PARAM_IS_STEPPED,
+        nullptr, 
+        "reverb",
+        "",
+        0., 1., 1,
+    },
+
+    {
+        k_RevRoomsize,
+        0, // not realtime-safe
+        nullptr, 
+        "roomsize",
+        "",
+        0., 1.2, .2,
+    },
+
+    {
+        k_RevDamping,
+        0, // not realtime-safe
+        nullptr, 
+        "damping",
+        "",
+        0., 1, .2,
+    },
+
+    {
+        k_RevWidth,
+        0, // not realtime-safe
+        nullptr, 
+        "width",
+        "",
+        0., 100, 20,
+    },
+
+    {
+        k_RevLevel,
+        0, // not realtime-safe
+        nullptr, 
+        "reverblevel",
+        "",
+        0., 1, .9,
+    },
+
+    /* chorus ---------------------------- */
+    {
+        k_Chorus,
+        CLAP_PARAM_IS_STEPPED,
+        nullptr, 
+        "chorus",
+        "",
+        0., 1., 1,
     },
     {
-        1, // prog0 id
+        k_ChorusNR,
+        CLAP_PARAM_IS_STEPPED, // not realtime-safe
+        nullptr, 
+        "chorusNR",
+        "",
+        0., 99, 3,
+    },
+    {
+        k_ChorusLevel,
+        0, // not realtime-safe
+        nullptr, 
+        "choruslevel",
+        "",
+        0., 1, .5,
+    },
+    {
+        k_ChorusSpeed,
+        0, // not realtime-safe
+        nullptr, 
+        "chorusspeed",
+        "",
+        0., 1, .5,
+    },
+    {
+        k_ChorusDepth,
+        0, // not realtime-safe
+        nullptr, 
+        "chorusdepth",
+        "",
+        0., 21, 5,
+    },
+    {
+        k_ChorusMod,
+        CLAP_PARAM_IS_STEPPED, // not realtime-safe
+        nullptr, 
+        "chorusmod",
+        "",
+        0., 1, 0 // sine or triangle
+    },
+
+    /* program --------------------------- */
+    {
+        k_Prog0, // prog0 id
         CLAP_PARAM_IS_STEPPED,  // flags
         nullptr,                // cookie
         "prog0",                // name 
         "",                     // module
         0., 15., 0.,            // program for ch0
     },
+
+    /* bank ------------------------------ */
     {
-        17, // bank0 id
+        k_Bank0, // bank0 id
         CLAP_PARAM_IS_STEPPED,  // flags
         nullptr,                // cookie
-        "bank0",        // name 
+        "bank0",                // name 
         "",                     // module
         0., 128., 0.,           // bank for ch0
     },
@@ -346,26 +446,36 @@ FluidsynthPlugin::s_fluidParams[] =
 uint32_t 
 FluidsynthPlugin::paramsCount() const noexcept
 {
+    assert((k_numParams - 30) == sizeof(s_fluidParams) / sizeof(s_fluidParams[0]));
     return k_numParams;
 }
 
 bool 
 FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
 {
-    if(paramIndex < k_numParams)
+    if(paramIndex < k_lastIndexedParam)
     {
-        if(paramIndex == 0)
-            *info = s_fluidParams[0];
-        else
-        if(paramIndex < k_Bank0)
-            *info = s_fluidParams[0];
-        else
-        if(paramIndex < k_Bank0)
-            *info = s_fluidParams[1];
+        *info = s_fluidParams[paramIndex];
         return true;
     }
     else
-        return false;
+    {
+        if(paramIndex < k_Prog0 || paramIndex >= k_Bank0 + 16)
+            return false;
+        if(paramIndex >= k_Prog0 && paramIndex < k_Bank0)
+        {
+            int chan = paramIndex - k_Prog0;
+            *info = s_fluidParams[k_lastIndexedParam];
+            info->id += chan;
+        }
+        else // if(paramIndex >= k_Bank0 && paramIndex < k_Bank0+16)
+        {
+            int chan = paramIndex - k_Bank0;
+            *info = s_fluidParams[k_lastIndexedParam+1];
+            info->id += chan;
+        }
+        return true;
+    }
 } 
 
 /// The host can at any time read parameters' value on the [main-thread] using
