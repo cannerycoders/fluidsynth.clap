@@ -45,8 +45,13 @@ FluidsynthPlugin::FluidsynthPlugin(
         m_synth(nullptr),
         m_pluginPath(pluginPath)
 {
-    m_pluginPresetDir = m_pluginPath.parent_path() / ".." / "presets";
-    m_sfontPath = m_pluginPresetDir / "default.sf2";
+    #ifdef _WIN32
+    m_sfontPath = "C:/Program Files/Common Files/Sounds/Banks/default.sf2";
+    #elif defined(__APPLE__)
+    m_sfontPath = "/Library/Audio/Sounds/Banks/default.sf2";
+    #else
+    m_sfontPath = "/usr/share/sounds/sf2/default.sf2";
+    #endif
     m_verbosity = 0;
 }
 
@@ -79,8 +84,8 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
     {
         if(!std::filesystem::exists(m_sfontPath))
         {
-            std::cerr << "Can't find default soundfont " << m_sfontPath << "\n";
-            m_sfontPath = "C:/sf2/FluidR3_GM.sf2";
+            std::cerr << "Can't find default soundfont " << m_sfontPath 
+                << ".\nPlease select one using the host's preset loader.\n";
         }
 
         // https://www.fluidsynth.org/api/settings_synth.html
@@ -152,7 +157,7 @@ FluidsynthPlugin::process(const clap_process *process) noexcept
             }
             this->processEvent(hdr);
             ++ev_index;
-            if (ev_index == nev) 
+            if(ev_index == nev) 
             {
                 // we reached the end of the event list
                 next_ev_frame = nframes;
