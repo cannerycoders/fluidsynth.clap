@@ -15,14 +15,15 @@ if(!Project.GetBuildVar("JSMK_NODOMAIN"))
 let platform = process.platform;
 let CLAPROOT = Project.GetBuildVar("CLAP_ROOT") || ""; // are clap submodules local?
 let fpkg = {
-    win32: "_prebuilt/fluidsynth-2.3.3-win10-x64"
+    win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
+    darwin: "/opt/homebrew",
     // win32: "_prebuilt/fluidsynth-dev-win10-x64"
 }[platform];
 let fluidSearchpaths = [`${fpkg}/include`];
 let fluidLibs = 
 {
-    win32: [`${fpkg}/lib/libfluidsynth.dll.a`]
-    // win32: [`${fpkg}/lib/fluidsynth.lib`]
+    win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
+    darwin: [`${fpkg}/lib/libfluidsynth.dylib`],
 }[platform];
 
 let m = Project.NewModule("pluginsrc");
