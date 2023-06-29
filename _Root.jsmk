@@ -69,10 +69,11 @@ case "win32":
             });
     break;
 case "darwin":
-    m.NewTask("fluidsynthInstallDLLs", "install", {
-                inputs: Project.Glob(`${fpkg}/bin/*.dll`),
-                installdir: installPlugDir,
-            });
+    // We only perform copy/fixup of dlls during the packaging phase.
+    // This is because the stripping overlaps with the required signing.
+    m.NewTask("fluidsynthPackageDLLs", "packagescript", {
+        ARGUMENTS: ["../build/fixupDLLs.js", installRoot]
+        })
     break;
 }
 
