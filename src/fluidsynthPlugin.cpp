@@ -33,15 +33,33 @@ FluidsynthPlugin::FluidsynthPlugin(
         m_synth(nullptr),
         m_pluginPath(pluginPath)
 {
-
     #ifdef _WIN32
-    m_pluginPresetDir = "C:/Program Files/Common Files/Sounds/Banks";
+    char const *appdata = getenv("LOCALAPPDATA");
+    m_pluginPresetDirs.push_back(std::filesystem::path("C:/Program Files/Common Files/Sounds/Banks"));
+    if(appdata)
+    {
+        std::filesystem::path ubanks = std::filesystem::path(appdata) / "Sounds/Banks";
+        m_pluginPresetDirs.push_back(ubanks);
+    }
+    if(app)
     #elif defined(__APPLE__)
-    m_pluginPresetDir = "/Library/Audio/Sounds/Banks";
+    char const *home = getenv("HOME");
+    m_pluginPresetDirs.push_back(std::filesystem::path("/Library/Audio/Sounds/Banks"));;
+    if(home)
+    {
+        std::filesystem::path ubanks = std::filesystem::path(home) / "Library/Audio/Sounds/Banks";
+        m_pluginPresetDirs.push_back(ubanks);
+    }
     #else
-    m_pluginPresetDir = "/usr/share/sounds/sf2";
+    char const *home = getenv("HOME");
+    m_pluginPresetDirs.push_back(std::filesystem::path("/usr/share/sounds/sf2"));
     #endif
-    m_sfontPath = m_pluginPresetDir / "default.sf2";
+    for(auto x : m_pluginPresetDirs)
+    {
+        m_sfontPath = x / "default.sf2";
+        if(std::filesystem::exists(m_sfontPath))
+            break;
+    }
     m_verbosity = 0;
 }
 
@@ -197,14 +215,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
 
         case CLAP_EVENT_NOTE_CHOKE: 
             {
-                const clap_event_note_t *ev = (const clap_event_note_t *)hdr;
+                // const clap_event_note_t *ev = (const clap_event_note_t *)hdr;
                 std::cerr << "TODO: handle note choke\n";
                 break;
             }
 
         case CLAP_EVENT_NOTE_EXPRESSION: 
             {
-                const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
+                // const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
                 std::cerr << "TODO: handle note expression\n";
                 break;
             }
@@ -219,14 +237,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
 
         case CLAP_EVENT_PARAM_MOD: 
             {
-                const clap_event_param_mod_t *ev = (const clap_event_param_mod_t *)hdr;
+                // const clap_event_param_mod_t *ev = (const clap_event_param_mod_t *)hdr;
                 std::cerr << "TODO: handle parameter modulation\n";
                 break;
             }
 
         case CLAP_EVENT_TRANSPORT: 
             {
-                const clap_event_transport_t *ev = (const clap_event_transport_t *)hdr;
+                // const clap_event_transport_t *ev = (const clap_event_transport_t *)hdr;
                 std::cerr << "TODO: handle transport event\n";
                 break;
             }
@@ -272,14 +290,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
 
         case CLAP_EVENT_MIDI_SYSEX: 
             {
-                const clap_event_midi_sysex_t *ev = (const clap_event_midi_sysex_t *)hdr;
+                // const clap_event_midi_sysex_t *ev = (const clap_event_midi_sysex_t *)hdr;
                 std::cerr << "TODO: handle MIDI sysex event\n";
                 break;
             }
 
         case CLAP_EVENT_MIDI2: 
             {
-                const clap_event_midi2_t *ev = (const clap_event_midi2_t *)hdr;
+                // const clap_event_midi2_t *ev = (const clap_event_midi2_t *)hdr;
                 std::cerr << "TODO: handle MIDI2 event\n";
                 break;
             }
@@ -693,11 +711,9 @@ FluidsynthPlugin::paramsFlush(const clap_input_events *in_events,
     const uint32_t nev = in_events->size(in_events);
     if(nev > 0)
     {
-        int bank = -1, program = -1;
         for(uint32_t i=0;i<nev;i++)
         {
             const clap_event_header_t *hdr = in_events->get(in_events, i);
-            bool changeProg = false;
             if(hdr->type == CLAP_EVENT_PARAM_VALUE)
             {
                 const clap_event_param_value_t *ev = (const clap_event_param_value_t *)hdr;
@@ -717,12 +733,16 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
         std::string tmp;
         if(!std::filesystem::exists(fp) && fp.is_relative())
         {
-            // try our default location 
-            std::filesystem::path nfp = m_pluginPresetDir / fp;
-            if(std::filesystem::exists(nfp))
+            // try our default locations 
+            for(auto x : m_pluginPresetDirs)
             {
-                tmp = nfp.generic_string();
-                location = tmp.c_str();
+                std::filesystem::path nfp = x / fp;
+                if(std::filesystem::exists(nfp))
+                {
+                    tmp = nfp.generic_string();
+                    location = tmp.c_str();
+                    break;
+                }
             }
         }
         int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
@@ -752,7 +772,6 @@ FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept
     // stash the current soundfont path, gain and 16 prog/bank values
     // \n separates the 18 values.
     std::string sfpath = m_sfontPath.generic_string();
-    int written = 0;
     ckIOError(stream->write(stream, sfpath.c_str(), sfpath.size()));
     ckIOError(stream->write(stream, "\n", 1));
 

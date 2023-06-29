@@ -1,19 +1,20 @@
 # fluidsynth.clap plugin 
 
-- [intro](#intro)
-- [install with fluidsynth](#install-with-fluidsynth)
-- [presets, soundfonts](#presets-soundfonts)
-- [state save/restore](#state-saverestore)
-- [parameters](#parameters)
-- [see also](#see-also)
-- [devinstall](#devinstall)
-  - [win32](#win32)
-  - [linux](#linux)
-  - [macos](#macos)
-- [implementation notes](#implementation-notes)
-  - [todo](#todo)
-- [buyer beware](#buyer-beware)
-- [license](#license)
+- [fluidsynth.clap plugin](#fluidsynthclap-plugin)
+  - [intro](#intro)
+  - [install with fluidsynth](#install-with-fluidsynth)
+  - [presets, soundfonts](#presets-soundfonts)
+  - [state save/restore](#state-saverestore)
+  - [parameters](#parameters)
+  - [see also](#see-also)
+  - [devinstall](#devinstall)
+    - [win32](#win32)
+    - [linux](#linux)
+    - [macos](#macos)
+  - [implementation notes](#implementation-notes)
+    - [todo](#todo)
+  - [buyer beware](#buyer-beware)
+  - [license](#license)
 
 ## intro
 
@@ -28,14 +29,14 @@ both the fluidsynth.clap plugin _and_ the fluidsynth runtime
 components.  Unzip the file into one of these standard CLAP plugin
 locations.  
 
-| platform | type   | typical path                       | semantic           |
-| :------- | :----- | :--------------------------------- | :----------------- |
-| windows  | system | c:/Program Files/Common Files/CLAP | COMMONPROGRAMFILES |
-| windows  | user   | $HOME/AppData/Local/Programs/CLAP  | LOCALAPPDATA       |
-| macos    | system | /Library/Audio/Plug-Ins/CLAP       |                    |
-| macos    | user   | $HOME/Library/Audio/Plug-Ins/CLAP  |                    |
-| linux    | system | /usr/lib/clap                      |                    |
-| linux    | user   | $HOME/.clap                        |                    |
+| platform | type   | typical path                       |
+| :------- | :----- | :--------------------------------- |
+| Windows  | system | c:/Program Files/Common Files/CLAP |
+| Windows  | user   | $LOCALAPPDATA/Programs/CLAP  |
+| MacOS    | system | /Library/Audio/Plug-Ins/CLAP       |
+| MacOS    | user   | $HOME/Library/Audio/Plug-Ins/CLAP  |
+| Linux    | system | /usr/lib/clap                      |
+| Linux    | user   | $HOME/.clap                        |
 
 If you already have a fluidsynth installation or wish to build your own 
 plugin see [below](#devinstall).
@@ -48,11 +49,13 @@ files can easily be found on the internet. The go-to starter soundfont
 is `FluidR3_GM.sf2`. `fluidsynth.clap` looks for a default soundfont 
 according to these platform specific conventions:
 
-| platform | location                                               |
-| :------- | :----------------------------------------------------- |
-| Windows  | C:/Program Files/Common Files/Sounds/Banks/default.sf2 |
-| MacOS    | /Library/Audio/Sounds/Banks/default.sf2                |
-| Linux    | /usr/share/sounds/sf2/default.sf2                      |
+| platform | type   | location                                               |
+| :------- | :----- | :----------------------------------------------------- |
+| Windows  | system | C:/Program Files/Common Files/Sounds/Banks/default.sf2 |
+| Windows  | user   | $LOCALAPPDATA/Sounds/Banks/default.sf2           |
+| MacOS    | system | /Library/Audio/Sounds/Banks/default.sf2                |
+| MacOS    | user   | $HOME/Library/Audio/Sounds/Banks/default.sf2           |
+| Linux    | system | /usr/share/sounds/sf2/default.sf2                      |
 
 To override these defaults, we employ CLAP's _preset extension_ to allow you 
 to request an alternate soundfont file.  In other words, `.sf2` files *are* 
