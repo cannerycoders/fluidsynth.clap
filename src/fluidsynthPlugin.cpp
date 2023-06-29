@@ -765,17 +765,34 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
 
 #define ckIOError(x)  if(x == -1) return false
 
+#define k_newStateVersion 1
+
 bool 
 FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept 
 {
     // stash the current soundfont path, gain and 16 prog/bank values
     // \n separates the 18 values.
-    std::string sfpath = m_sfontPath.generic_string();
+
+    std::string sfpath;
+    uint16_t vers = k_newStateVersion;
+    if(m_sfontPath.filename().generic_string() == "default.sf2")
+        sfpath = "default.sf2";
+    else
+        sfpath = m_sfontPath.generic_string();
+
+    char buf[8];
+    strcpy(buf, "FSPG");
+    memcpy(buf+5, &vers, 2);
+    buf[7] = '\n';
+    ckIOError(stream->write(stream,buf, 8));
+
     ckIOError(stream->write(stream, sfpath.c_str(), sfpath.size()));
     ckIOError(stream->write(stream, "\n", 1));
 
     ckIOError(stream->write(stream, &m_gain, sizeof(m_gain)));
     ckIOError(stream->write(stream, "\n", 1));
+
+    // todo: effects parameters
 
     int fontId; // ignored, currently we keep the same font for all channels
     int bank, prog;
@@ -796,7 +813,23 @@ FluidsynthPlugin::stateLoad(const clap_istream *stream) noexcept
 {
     std::string sfpath;
     float gain;
-    char buf[3];
+    char buf[8];
+    ckIOError(stream->read(stream, buf, 8));
+    if(strcmp(buf, "FSPG") != 0)
+    {
+        std::cerr << "FluidsynthPlugin found bogus state\n";
+        return false;
+    }
+
+    uint16_t vers;
+    memcpy(&vers, buf+5, 2);
+
+    if(vers > k_newStateVersion)
+    {
+        std::cerr << "FluidsynthPlugin found futuristic state (ignored)\n";
+        return false;
+    }
+
     while(1 == stream->read(stream, buf, 1) && buf[0] != '\n')
         sfpath.push_back(buf[0]);
 
