@@ -78,6 +78,7 @@ The [General Midi standard](https://cannerycoders.com/docs/fiddle/reference/midi
 defines a standard mapping between an index and an instrument. Soundfonts
 with `GM` in their name purport to follow this convention.
 
+Here are the exposed/supported fluidsynth parameters and their ids.
 
 | id range | description                             | value range | default |
 | :------- | :-------------------------------------- | :---------- | :------ |
@@ -121,7 +122,6 @@ to add the location of `fluidsynth.clap` to `PATH`, and/or
 If you wish to build or download fluidsynth yourself, please proceed to
 the platform-specific instructions that follow.
 
-
 ### win32
 
 Windows users can download a pre-compiled collection of fluidsynth
@@ -136,7 +136,6 @@ Another approach is to install vcpkg and then build fluidsynth yourself.
 git clone https://github/microsoft/vcpkg (etc)
 vcpkg install fluidsynth`
 ```
-
 
 ### linux 
 Linux users have the easiest job because fluidsynth is widely available as 
@@ -156,6 +155,8 @@ sudo apt-get install libfluidsynth-dev`
 
 MacOS users either obtain the fluidsynth dlls with this fluidsynth plugin 
 distribution or build/install them following the developer procedure below.
+
+This requires that you install [homebrew](https://brew.sh).
 
 ```sh
 brew install fluidsynth`
