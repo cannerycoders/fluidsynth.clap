@@ -60,7 +60,7 @@ let t3 = m.NewTask("fluidsynthInstall", "install", {
 
 if(platform == "win32")
 {
-    let t4 = m.NewTask("fluidsynthInstallDLLs", "install", {
+    m.NewTask("fluidsynthInstallDLLs", "install", {
                 inputs: Project.Glob(`${fpkg}/bin/*.dll`),
                 installdir,
             });
