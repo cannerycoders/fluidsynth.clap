@@ -41,7 +41,6 @@ FluidsynthPlugin::FluidsynthPlugin(
         std::filesystem::path ubanks = std::filesystem::path(appdata) / "Sounds/Banks";
         m_pluginPresetDirs.push_back(ubanks);
     }
-    if(app)
     #elif defined(__APPLE__)
     char const *home = getenv("HOME");
     m_pluginPresetDirs.push_back(std::filesystem::path("/Library/Audio/Sounds/Banks"));;
