@@ -48,13 +48,15 @@ let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     deps: fluidLibs
 });
 
-let installdir = "resources/plugins/fluidsynth";
+let installdir = "resources/plugins/fluidsynth.clap";
+let zipfile = "fluidsynth.clap.zip";
 let installRoot = Project.EvaluateBuildVar("InstallDir");
 let t3 = m.NewTask("fluidsynthInstall", "install", {
     inputs: t2.GetOutputs(), 
-    installext: ".clap",
+    installext: ".clap", // <--------- need separate rule for other files
     installdir, 
 });
+
 
 if(platform == "win32")
 {
@@ -63,3 +65,14 @@ if(platform == "win32")
                 installdir,
             });
 }
+
+m.NewTask("fluidsynthInstallLegal", "install", {
+    inputs: ["README.md", "LICENSE"],
+    installdir,
+});
+
+m.NewTask("fluidsynthPackage", "packagescript", {
+    ARGUMENTS: ["../build/zipdir.js", 
+        jsmk.path.join(installRoot, installdir), 
+        jsmk.path.join(installRoot, "..", zipfile)]
+});
