@@ -96,7 +96,7 @@ private:
     int m_fontId;
     int m_verbosity;
     std::filesystem::path m_pluginPath;
-    std::filesystem::path m_pluginPresetDir;
+    std::vector<std::filesystem::path> m_pluginPresetDirs;
     std::filesystem::path m_sfontPath;
 
     enum paramId
