@@ -1,18 +1,15 @@
 # fluidsynth.clap plugin 
 
 - [intro](#intro)
+- [install with fluidsynth](#install-with-fluidsynth)
 - [presets, soundfonts](#presets-soundfonts)
 - [state save/restore](#state-saverestore)
 - [parameters](#parameters)
 - [see also](#see-also)
-- [install for users](#install-for-users)
-  - [Windows Install](#windows-install)
-  - [Linux Install](#linux-install)
-  - [MacOS Install](#macos-install)
-- [install for developers](#install-for-developers)
-  - [Windows / VCPKG](#windows--vcpkg)
-  - [MacOS / Homebrew](#macos--homebrew)
-  - [Linux](#linux)
+- [devinstall](#devinstall)
+  - [win32](#win32)
+  - [linux](#linux)
+  - [macos](#macos)
 - [implementation notes](#implementation-notes)
   - [todo](#todo)
 - [buyer beware](#buyer-beware)
@@ -23,6 +20,25 @@
 `fluidsynth.clap` is a simple, open source, "headless" (no GUI) bridge to 
 the [fluidsynth soundfont synthesizer](https://fluidsynth.org) in the 
 form of a [CLAP plugin](https://github.com/free-audio/clap).
+
+## install with fluidsynth
+
+In our releases section you can find a .zip file that includes 
+both the fluidsynth.clap plugin _and_ the fluidsynth runtime 
+components.  Unzip the file into one of these standard CLAP plugin
+locations.  
+
+| platform | type   | typical path                       | semantic           |
+| :------- | :----- | :--------------------------------- | :----------------- |
+| windows  | system | c:/Program Files/Common Files/CLAP | COMMONPROGRAMFILES |
+| windows  | user   | $HOME/AppData/Local/Programs/CLAP  | LOCALAPPDATA       |
+| macos    | system | /Library/Audio/Plug-Ins/CLAP       |                    |
+| macos    | user   | $HOME/Library/Audio/Plug-Ins/CLAP  |                    |
+| linux    | system | /usr/lib/clap                      |                    |
+| linux    | user   | $HOME/.clap                        |                    |
+
+If you already have a fluidsynth installation or wish to build your own 
+plugin see [below](#devinstall).
 
 ## presets, soundfonts
 
@@ -86,7 +102,7 @@ More details on these settings can be found [in the fluidsynth docs](https://www
 [fluidsynth](https://fluidsynth.org) |
 [musical artifacts](https://musical-artifacts.com/artifacts?formats=sf2&tags=soundfont)
 
-## install for users
+## devinstall
 
 This plugin has dependencies on the `dlls` that implement fluidsynth, 
 obtaining them depends upon the platform (OS plus architecture).
@@ -102,16 +118,8 @@ to add the location of `fluidsynth.clap` to `PATH`, and/or
 If you wish to build or download fluidsynth yourself, please proceed to
 the platform-specific instructions that follow.
 
-| platform | type   | typical path                       | semantic           |
-| :------- | :----- | :--------------------------------- | :----------------- |
-| windows  | system | c:/Program Files/Common Files/CLAP | COMMONPROGRAMFILES |
-| windows  | user   | $HOME/AppData/Local/Programs/CLAP  | LOCALAPPDATA       |
-| macos    | system | /Library/Audio/Plug-Ins/CLAP       |                    |
-| macos    | user   | $HOME/Library/Audio/Plug-Ins/CLAP  |                    |
-| linux    | system | /usr/lib/clap                      |                    |
-| linux    | user   | $HOME/.clap                        |                    |
 
-### Windows Install
+### win32
 
 Windows users can download a pre-compiled collection of fluidsynth
 runtime components [here](https://github.com/FluidSynth/fluidsynth/releases).
@@ -119,7 +127,15 @@ The .zip file is organized in linux fashion with `bin`, `lib` and `include`
 directories.  In order for fluidsynth.clap to find the .dll files you may
 need to add the install location to your PATH.
 
-### Linux Install
+Another approach is to install vcpkg and then build fluidsynth yourself.
+
+```sh
+git clone https://github/microsoft/vcpkg (etc)
+vcpkg install fluidsynth`
+```
+
+
+### linux 
 Linux users have the easiest job because fluidsynth is widely available as 
 a linux package.  For example on debian: 
 
@@ -127,29 +143,19 @@ a linux package.  For example on debian:
 sudo apt-get install fluidsynth fluid-soundfont-gm
 ```
 
-### MacOS Install
-MacOS users either obtain the fluidsynth dlls with this fluidsynth plugin 
-distribution or build/install them following the developer procedure below.
-
-## install for developers
-
-### Windows / VCPKG
-
-```sh
-git clone https://github/microsoft/vcpkg (etc)
-vcpkg install fluidsynth`
-```
-
-### MacOS / Homebrew
-
-```sh
-brew install fluidsynth`
-```
-
-### Linux
+And to obtain the compile/API support:
 
 ```sh
 sudo apt-get install libfluidsynth-dev`
+```
+
+### macos
+
+MacOS users either obtain the fluidsynth dlls with this fluidsynth plugin 
+distribution or build/install them following the developer procedure below.
+
+```sh
+brew install fluidsynth`
 ```
 
 ## implementation notes
@@ -181,13 +187,10 @@ edges, this is not a toy, though it may appear so.
 
 Sourcecode provided herein is subject to the MIT license.  
 
-Binaries provide via releases may include components with different licenses.
+Binaries provided via releases may include components with different licenses.
 
 Fluidsynth is GPL2, license found [here](https://github.com/FluidSynth/fluidsynth/blob/master/LICENSE).
 Fluidsynth relies on other components subject to their own licenses.
 
-The Clap plugin API is MIT, licenses found [here](https://github.com/free-audio/clap/blob/main/LICENSE)
+The Clap plugin API is MIT licensed, licenses found [here](https://github.com/free-audio/clap/blob/main/LICENSE)
 and [here](https://github.com/free-audio/clap-helpers/blob/main/LICENSE)
-
-
-
