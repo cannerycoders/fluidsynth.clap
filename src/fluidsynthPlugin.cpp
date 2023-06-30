@@ -16,7 +16,7 @@ clap_plugin_descriptor_t const FluidsynthPlugin::s_descriptor =
 {
    CLAP_VERSION_INIT,
    "org.fluidsynth",
-   "FluidSynth",
+   "FluidSynth.clap",
    "fluidsynth.org",
    "https://fluidsynth.org",
    "https://fluidsynth.org/documentation",
@@ -59,7 +59,10 @@ FluidsynthPlugin::FluidsynthPlugin(
         if(std::filesystem::exists(m_sfontPath))
             break;
     }
-    m_verbosity = 0;
+    if(getenv("FLUIDSYNTH_CLAP_DEBUG"))
+        m_verbosity = 2;
+    else
+        m_verbosity = 0;
 }
 
 FluidsynthPlugin::~FluidsynthPlugin()
@@ -255,7 +258,12 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
                 int chan = 0x0F & ev->data[0];
                 switch(cmd)
                 {
-                // expect 0x80 and 0x90 to be handled by noteOn/Off
+                case 0x80:
+                    fluid_synth_noteoff(m_synth, chan, ev->data[1]);
+                    break;
+                case 0x90:
+                    fluid_synth_noteon(m_synth, chan, ev->data[1], ev->data[2]);
+                    break;
                 case 0xa0: // polyphonic aftertouch
                     fluid_synth_key_pressure(m_synth, chan, ev->data[1], ev->data[2]);
                     break;
@@ -454,7 +462,7 @@ FluidsynthPlugin::s_fluidParams[] =
         nullptr,                // cookie
         "prog0",                // name 
         "",                     // module
-        0., 15., 0.,            // program for ch0
+        0., 127., 0.,          // program for ch0
     },
 
     /* bank ------------------------------ */
@@ -491,12 +499,14 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
             int chan = relIndex;
             *info = s_fluidParams[k_indexedParamCount];
             info->id += chan;
+            snprintf(info->name, sizeof(info->name), "prog%d", chan);
         }
         else // if(paramIndex >= k_Bank0 && paramIndex < k_Bank0+16)
         {
             int chan = (relIndex - 16);
             *info = s_fluidParams[k_indexedParamCount+1];
             info->id += chan;
+            snprintf(info->name, sizeof(info->name), "bank%d", chan);
         }
         return true;
     }
