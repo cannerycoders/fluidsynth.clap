@@ -1,9 +1,0 @@
-{
-  "app": "fluidsynth.clap",
-  "deployment": "debug",
-  "vers": "0.1.0",
-  "track": "beta",
-  "built": "6/30/2023, 8:24:43 AM PDT",
-  "iso": "2023-06-30T15:24:43.356Z",
-  "by": "jsmk build install"
-}

@@ -9,3 +9,4 @@ _package/
 */_released/
 .ignore/
 .DS_Store
+BUILD.json
