@@ -1,22 +1,60 @@
-let appname = "fluidsynth.clap";
-let vers = "0.1.0"
-if(!Project.GetBuildVar("JSMK_NODOMAIN"))
+/**
+ * Our clap plugin is a single dso/dll that has dependencies on one or more
+ * other dsos.  Our plugin package combines these all into a platform-specifi
+ * subdirectory structure.
+ * 
+ *  Windows, Linux:
+ *     fluidsynth.clap/  <-- a directory
+ *          fluidsynth.clap <--- the real clap plugin
+ *          libfluidsynth-3.dll <-- the real fluidsynth
+ *          libglib-2.0-0.dll <-- example of libfluidsynth-3 dependency
+ *          ....
+ *          README.md, LICENSE, etc
+ *  MacOS:
+ *     fluidsynth.clap/  <-- a directory/bundle
+ *          Contents/
+ *          MacOS/
+ *              fluidsynth.clap <-- the real clap plugin
+ *          PkgInfo
+ *          Resources/
+ *             clap.icns
+ *          _CodeSignature/
+ *             CodeResources   (xml/plist)
+ */
+let pkgj = jsmk.file.read(jsmk.path.join(Project.ProjectDir, "package.json"));
+let pkg = JSON.parse(pkgj);
+let appName = pkg.name;
+let appVers = pkg.version;
+
+Project.EstablishDomain(appName, /(vs|gcc|clang)/,
 {
-    Project.EstablishDomain(appname, /(vs|gcc|clang)/,
-    {
-        AppName: appname,
-        Package: `${appname}-${vers}`,
-        Version: vers,
-        Track: "beta",
-        CppStd: "c++17", // clap prefers modern c++
-    });
-}
+    AppName: appName,
+    Package: appName, // version-less (version installed inside)
+    Version: appVers,
+    Track: "beta",
+    TimestampFile: "BUILD.json",
+    CppStd: "c++17", // clap prefers modern c++
+});
+
+Project.Define({
+    win32: {
+        WIN32: null,
+        __PLATFORM_WIN32__: null,
+        _CONSOLE: null,
+        _CRT_SECURE_NO_WARNINGS: null,
+    },
+    linux: {
+        __PLATFORM_LINUX__: null,
+        LINUX: null
+    },
+    darwin: {
+        __PLATFORM_MACOS__: null,
+        __MACOSX_CORE__: null,
+    }
+}[process.platform]);
 
 let platform = process.platform;
-let CLAPROOT = Project.GetBuildVar("CLAP_ROOT") || ""; // are clap submodules local?
 let installRoot = Project.EvaluateBuildVar("InstallDir");
-let installRezDir = Project.GetBuildVar("InstallResources") || "resources";
-let installPlugDir = `${installRezDir}/plugins/fluidsynth.clap`;
 
 let fpkg = {
     win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
@@ -42,8 +80,8 @@ let t1 = m.NewTask("compile", "cpp->o",
     defs,
     searchpaths: [
         "src",
-        `${CLAPROOT}clap/include`,
-        `${CLAPROOT}clap-helpers/include`,
+        `clap/include`,
+        `clap-helpers/include`,
         ...fluidSearchpaths,
     ],
 });
@@ -53,37 +91,58 @@ let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     deps: fluidLibs
 });
 
-let zipfile = "fluidsynth.clap.zip";
-let t3 = m.NewTask("fluidsynthInstall", "install", {
-    inputs: t2.GetOutputs(), 
-    installext: ".clap", // <--------- need separate rule for other files
-    installdir: installPlugDir, 
-});
-
+/* copy our .clap file (dll) into an app/package framework ----------- */
 switch(platform)
 {
 case "win32":
-    m.NewTask("fluidsynthInstallDLLs", "install", {
+case "linux":
+    m.NewTask("installPlu", "install", {
+        inputs: t2.GetOutputs(), 
+        installext: ".clap", // <--------- need separate rule for other files
+        installdir: "/"
+    });
+    m.NewTask("installDLLs", "install", {
                 inputs: Project.Glob(`${fpkg}/bin/*.dll`),
-                installdir: installPlugDir,
+                installdir: "/"
             });
+    m.NewTask("installLegal", "install", {
+        inputs: ["README.md", "LICENSE", "BUILD.json"],
+        installdir: "/",
+    });
     break;
 case "darwin":
     // We only perform copy/fixup of dlls during the packaging phase.
     // This is because the stripping overlaps with the required signing.
-    m.NewTask("fluidsynthPackageDLLs", "packagescript", {
-        ARGUMENTS: ["../build/fixupDLLs.js", installRoot]
-        })
+    {
+        let binDir = jsmk.path.join(installRoot, "Contents/MacOS");
+        let frameworksDir = jsmk.path.join(installRoot, "Contents/Frameworks");
+        let resourcesDir = jsmk.path.join(installRoot, "Contents/Resources");
+        m.NewTask("installPlug", "install", {
+            inputs: t2.GetOutputs(), 
+            installext: ".clap", // <--------- need separate rule for other files
+            installdir: binDir,
+        });
+        m.NewTask("packageDLLs", "packagescript", {
+            ARGUMENTS: ["build/fixupDLLs.js",
+                 installRoot, frameworksDir, ...fluidLibs
+                ]
+            })
+        m.NewTask("installLegal", "install", {
+            inputs: ["README.md", "LICENSE", "BUILD.json"],
+            installdir: jsmk.path.join(resourcesDir, "etc"),
+        });
+        m.NewTask("installPkg", "install", {
+            inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
+            installdir: "Contents"
+        });
+    }
     break;
 }
 
-m.NewTask("fluidsynthInstallLegal", "install", {
-    inputs: ["README.md", "LICENSE"],
-    installdir: installPlugDir,
-});
-
+/* finally, we zip ------------------------------- */
+let zipfile = "fluidsynth.clap.zip";
 m.NewTask("fluidsynthPackage", "packagescript", {
-    ARGUMENTS: ["../build/zipdir.js", 
-        jsmk.path.join(installRoot, installPlugDir), 
+    ARGUMENTS: ["build/zipdir.js", installRoot,
         jsmk.path.join(installRoot, "..", zipfile)]
 });
+
