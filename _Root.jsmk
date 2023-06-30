@@ -95,8 +95,12 @@ let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
 switch(platform)
 {
 case "win32":
+    m.NewTask("installIcon", "install", {
+        inputs: Project.Glob("build/win32/*"),
+        installdir: "/"
+    }); // fall through
 case "linux":
-    m.NewTask("installPlu", "install", {
+    m.NewTask("installPlug", "install", {
         inputs: t2.GetOutputs(), 
         installext: ".clap", // <--------- need separate rule for other files
         installdir: "/"
