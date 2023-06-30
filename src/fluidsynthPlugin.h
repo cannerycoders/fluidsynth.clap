@@ -58,7 +58,7 @@ public:
         if(isInput)
         {
             snprintf(info->name, sizeof(info->name), "%s", "Fluid noteport");
-            info->supported_dialects = CLAP_NOTE_DIALECT_CLAP;
+            info->supported_dialects = CLAP_NOTE_DIALECT_CLAP|CLAP_NOTE_DIALECT_MIDI;
             info->preferred_dialect = CLAP_NOTE_DIALECT_CLAP;
             return true;
         }
