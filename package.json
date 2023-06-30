@@ -1,18 +1,13 @@
 {
-  "name": "onda",
+  "name": "fluidsynth.clap",
   "version": "0.1.0",
-  "description": "waves",
-  "main": "index.js",
-  "directories": {
-    "doc": "doc",
-    "test": "test"
-  },
+  "description": "CLAP bridge to open source audio soundfont synthesizer",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cannerycoders/onda.git"
+    "url": "git+https://github.com/cannerycoders/fluidsynth.clap.git"
   },
   "keywords": [
     "audio",
@@ -22,9 +17,9 @@
   "author": "dbadb",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/cannerycoders/onda/issues"
+    "url": "https://github.com/cannerycoders/fluidsynth.clap/issues"
   },
-  "homepage": "https://github.com/cannerycoders/onda#readme",
+  "homepage": "https://github.com/cannerycoders/fluidsynth.clap#readme",
   "dependencies": {
     "zip-a-folder": "^2.0.0"
   }
