@@ -4,3 +4,6 @@
 [submodule "clap-helpers"]
 	path = clap-helpers
 	url = https://github.com/free-audio/clap-helpers
+[submodule "fluidsynth"]
+	path = fluidsynth
+	url = https://github.com/FluidSynth/fluidsynth
