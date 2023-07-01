@@ -122,14 +122,16 @@ case "darwin":
             installext: ".clap", // <--------- need separate rule for other files
             installdir: binDir,
         });
+        /*
         m.NewTask("packageDLLs", "installscript", {
             ARGUMENTS: ["build/fixupDLLs.js",
                  jsmk.path.join(installRoot, frameworksDir), 
                  ...tcpy.GetOutputs()
                 ]
             })
+        */
         m.NewTask("installLegal", "install", {
-            inputs: ["README.md", "LICENSE", "BUILD.json"],
+            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
             installdir: jsmk.path.join(resourcesDir, "etc"),
         });
         m.NewTask("installPkg", "install", {
@@ -144,6 +146,7 @@ case "darwin":
         //   (nb: this is distinct from Info.plist!!!)
 
         // and this is where notarization of signing occurs
+        /*
         m.NewTask("osxSign", "packagescript",
         {
             ARGUMENTS: [
@@ -158,6 +161,7 @@ case "darwin":
                 "build/osxNotarize.js", appDirPath,
             ]
         });
+        */
     }
     break;
 }
