@@ -1,50 +1,23 @@
 // Currently our job is to populate fixup packaged dlls so they they refer
-// to one another via relative paths.   Moreover, on MacOS, security requires
-// that they be located in Frameworks and signed.
+// to one another via relative paths.   On MacOS, security policies require
+// that dylibs be located in Frameworks and signed.
 //
-// usage `node fixupDLL.js appInstallDir`
+// https://stackoverflow.com/questions/49223687/my-target-is-dynamically-linked-against-libraries-from-brew-how-to-bundle-for-d
+//
+// usage `node fixupDLL.js targetDir  _install/.../plugin1.clap ...`
 //
 let fs = require("fs"); // require("fs/promises");
 let path = require("path");
 let execFileSync = require("child_process").execFileSync;
 
-console.log("" + process.argv);
-process.exit(0);
+if(process.argv.length < 4)
+    throw new Error(process.argv[1] + " requires 4+ args, got " + process.argv.length);
 
-if(process.argv.length != 3)
-    throw new Error(process.argv[1] + " requires 3 args, got " + process.argv.length);
+let targetDir = process.argv[2];
+let filesToFix = process.argv.slice(3);
 
-let appDir = process.argv[2];
-let chugloc, chugreldir, dlldir;
-if(process.platform == "darwin")
-{
-    dlldir = `${appDir}/Contents/Frameworks`; 
-    plugdir = 
-    chugloc = `${appDir}/Contents/Resources/chuck/chugins`;
-    chugreldir = "../../../Frameworks";
-}
-else
-{
-    dlldir = appDir;
-    chugloc = `${appDir}/resources/chug/chugins`;
-    chugreldir = "../../..";
-}
-
-console.log(`\n\nfixupDLLs dlldir:${dlldir}----\n\n`);
-
-let filesToFix = 
-{
-    darwin:
-    [
-        [`${chugloc}/FluidSynth.chug`, chugreldir]
-    ],
-    win32: 
-    [
-        // so far fluid-support happen in _Proj.jsmk since
-        // no fixups are required.
-    ]
-}[process.platform];
-
+console.log(`\n\nfixupDLLs targetDir:${targetDir}, fixing: ${filesToFix}----\n\n`);
+fs.mkdirSync(targetDir, { recursive: true });
 
 if(process.platform == "darwin")
 {
@@ -55,37 +28,52 @@ if(process.platform == "darwin")
     let depsMap = {}; // maps libname to list of deplibnames
 
     // first perform the copy
-    for(let [file, rel] of filesToFix) // ie: the chugins with external deps
+    let rel = "../Frameworks"; // relative path from file to its dylibs.
+    for(let file of filesToFix) // ie: the chugins with external deps
     {
         osxFindDependencies(file, doneFindDep, depsMap);
-        delete doneFindDep[file]; // don't want to copy/move these file
+        delete doneFindDep[file]; // don't want to copy/move these files, they're already in place
         osxFixupRefs(file, null, `@loader_path/${rel}`, depsMap);
     }
 
+    console.log("\n\n---- copying -----\n\n\n");
+
+    // fixup up refs of incoming files, transitive dependents happen after the ensuing copy.
     let doneCopy = {};
     for(let key in doneFindDep)
+    {
+        console.log(key);
         osxCopyOne(key, doneCopy);
-    
-    // now fixup all refererences with install_name_tool0
+    }
+
+    console.log("\n\n---- fixing -----\n\n\n");
+
+    // now fixup all refererences with install_name_tool
     // console.log("depsMap\n" + JSON.stringify(depsMap, null, 2));
     for(let key in doneCopy)
-        osxFixupRefs(key, doneCopy[key], "@loader_path", depsMap);
+    {
+        // nb: key is the copied fileref, doneCopy[key] is the orig
+        osxFixupRefs(key, doneCopy[key], `@loader_path/${rel}`, depsMap);
+    }
 
+    // depsMap 
+    //   key is local dll name (eg libvorbis.0.dylib), 
+    //   value  is [original deps eg:/opt/homebrew/opt/opus/lib/libopus.0.dylib]
     function osxFixupRefs(tgtfile, oldid, prefix, depsMap)
     {
-        // 
-        let filebase = path.basename(tgtfile);
-        console.log(`Fixup ${filebase} id(${oldid})`);
+        let filebase = path.basename(tgtfile); // to lookup in depsMap
+        console.log(`Fixup ${filebase} (original:${oldid})`);
         let deps = depsMap[filebase] || [];
         let arglist = ["-id", filebase];
         for(let ref of deps)
         {
             let basename = path.basename(ref);
             let newref = `${prefix}/${basename}`;
-            arglist.push(...["-change", ref, newref]);
-            console.log(`-change ${ref}  to ${newref}}`);
+            arglist.push("-change", ref, newref);
         }
         arglist.push(tgtfile);
+
+        console.log(`fixing ${filebase}\n\t${arglist}`);
         let stdout = execFileSync("install_name_tool", arglist).toString().trim();
         if(stdout.length)
             console.log(`install_name_tool ${arglist}:\n${stdout}`);
@@ -134,7 +122,7 @@ if(process.platform == "darwin")
     // of links in our distribution.
     function osxCopyOne(src, done)
     {
-        let dst = path.join(dlldir, path.basename(src))
+        let dst = path.join(targetDir, path.basename(src))
         let stat = fs.lstatSync(src);
         if(stat.isSymbolicLink())
         {
@@ -148,7 +136,7 @@ if(process.platform == "darwin")
         }
         if(!done[dst])
         {
-            console.log(`copying ${path.basename(src)} to dlldir`); 
+            console.log(`copying ${path.basename(src)} to targetDir`); 
             fs.copyFileSync(src, dst);
             fs.chmodSync(dst, 0o755);
             done[dst] = src;

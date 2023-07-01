@@ -117,14 +117,15 @@ case "darwin":
         let binDir = "Contents/MacOS";
         let frameworksDir = "Contents/Frameworks";
         let resourcesDir = "Contents/Resources";
-        m.NewTask("installPlug", "install", {
+        let tcpy = m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <--------- need separate rule for other files
             installdir: binDir,
         });
         m.NewTask("packageDLLs", "installscript", {
             ARGUMENTS: ["build/fixupDLLs.js",
-                 installRoot, frameworksDir, ...fluidLibs
+                 jsmk.path.join(installRoot, frameworksDir), 
+                 ...tcpy.GetOutputs()
                 ]
             })
         m.NewTask("installLegal", "install", {
@@ -134,6 +135,28 @@ case "darwin":
         m.NewTask("installPkg", "install", {
             inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
             installdir: "Contents"
+        });
+        // osxsigning.js is where entitlements.plist is accessed.
+        // https://developer.apple.com/documentation/security/hardened_runtime
+        // in order to load vst3 plugings we must:
+        //   com.apple.security.cs.disable-library-validation true
+        //   com.apple.security.device.audio-input true
+        //   (nb: this is distinct from Info.plist!!!)
+
+        // and this is where notarization of signing occurs
+        m.NewTask("osxSign", "packagescript",
+        {
+            ARGUMENTS: [
+                "build/osxNotarize.js", appDirPath,
+            ]
+        });
+        
+        // and this is where notarization of signing occurs
+        m.NewTask("osxNotarize", "repositscript",
+        {
+            ARGUMENTS: [
+                "build/osxNotarize.js", appDirPath,
+            ]
         });
     }
     break;

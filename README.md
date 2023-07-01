@@ -7,6 +7,7 @@
   - [state save/restore](#state-saverestore)
   - [parameters](#parameters)
   - [see also](#see-also)
+  - [soundfonts](#soundfonts)
   - [devinstall](#devinstall)
     - [win32](#win32)
     - [linux](#linux)
@@ -104,7 +105,16 @@ More details on these settings can be found [in the fluidsynth docs](https://www
 [soundfont wikipedia](https://en.wikipedia.org/wiki/SoundFont) |
 [CLAP plugins](https://github.com/free-audio/clap) |
 [fluidsynth](https://fluidsynth.org) |
-[musical artifacts](https://musical-artifacts.com/artifacts?formats=sf2&tags=soundfont)
+[juicysfplugin (VST, VST3, Au)](https://github.com/Birch-san/juicysfplugin)
+
+## soundfonts
+
+Here are a few sources of starter soundfonts
+
+* [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
+* [Fatboy](https://fatboy.site/)
+* [MuseScore links](https://musescore.org/en/handbook/soundfonts-and-sfz-files#list)
+* [FlameStudios guitar soundfonts](http://www.flamestudios.org/free/Soundfonts)
 
 ## devinstall
 
