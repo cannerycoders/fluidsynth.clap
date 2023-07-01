@@ -1,21 +1,20 @@
 # fluidsynth.clap plugin 
 
-- [fluidsynth.clap plugin](#fluidsynthclap-plugin)
-  - [intro](#intro)
-  - [install with fluidsynth](#install-with-fluidsynth)
-  - [presets, soundfonts](#presets-soundfonts)
-  - [state save/restore](#state-saverestore)
-  - [parameters](#parameters)
-  - [see also](#see-also)
-  - [soundfonts](#soundfonts)
-  - [devinstall](#devinstall)
-    - [win32](#win32)
-    - [linux](#linux)
-    - [macos](#macos)
-  - [implementation notes](#implementation-notes)
-    - [todo](#todo)
-  - [buyer beware](#buyer-beware)
-  - [license](#license)
+- [intro](#intro)
+- [install with fluidsynth](#install-with-fluidsynth)
+- [presets, soundfonts](#presets-soundfonts)
+- [state save/restore](#state-saverestore)
+- [parameters](#parameters)
+- [soundfonts](#soundfonts)
+- [see also](#see-also)
+- [devinstall](#devinstall)
+  - [win32](#win32)
+  - [linux](#linux)
+  - [macos](#macos)
+- [implementation notes](#implementation-notes)
+  - [todo](#todo)
+- [buyer beware](#buyer-beware)
+- [license](#license)
 
 ## intro
 
@@ -100,13 +99,6 @@ Here are the exposed/supported fluidsynth parameters and their ids.
 
 More details on these settings can be found [in the fluidsynth docs](https://www.fluidsynth.org/api/settings_synth.html).
 
-## see also
-
-[soundfont wikipedia](https://en.wikipedia.org/wiki/SoundFont) |
-[CLAP plugins](https://github.com/free-audio/clap) |
-[fluidsynth](https://fluidsynth.org) |
-[juicysfplugin (VST, VST3, Au)](https://github.com/Birch-san/juicysfplugin)
-
 ## soundfonts
 
 Here are a few sources of starter soundfonts
@@ -115,6 +107,13 @@ Here are a few sources of starter soundfonts
 * [Fatboy](https://fatboy.site/)
 * [MuseScore links](https://musescore.org/en/handbook/soundfonts-and-sfz-files#list)
 * [FlameStudios guitar soundfonts](http://www.flamestudios.org/free/Soundfonts)
+
+## see also
+
+[soundfont wikipedia](https://en.wikipedia.org/wiki/SoundFont) |
+[CLAP plugins](https://github.com/free-audio/clap) |
+[fluidsynth](https://fluidsynth.org) |
+[juicysfplugin (VST, VST3, Au)](https://github.com/Birch-san/juicysfplugin)
 
 ## devinstall
 
