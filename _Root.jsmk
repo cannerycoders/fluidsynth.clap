@@ -65,7 +65,14 @@ let fluidSearchpaths = [`${fpkg}/include`];
 let fluidLibs = 
 {
     win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
+    darwin: [],
 }[platform];
+
+let fluidModules =
+{
+    darwin: ["libfluidsynth"]
+}[platform];
+
 
 let m = Project.NewModule("fluidsynth.clap");
 let defs = {
@@ -73,10 +80,10 @@ let defs = {
     CLAP_NO_YAS: null
 };
 
-Project.NewProject("libfluidsynth", {
+Project.NewProject("libfluidsynthProj", {
     ProjectDir: "fluidsynth/src",
     ProjectFilePath: "_LibFluidSynth.jsmk",
-}).EstablishBarrier("before");
+}).EstablishBarrier("after");
 
 let t1 = m.NewTask("compile", "cpp->o", 
 {
@@ -90,10 +97,12 @@ let t1 = m.NewTask("compile", "cpp->o",
     ],
 });
 
-
-let t2 = m.NewTask("fluidsynth.clap", "cpp.o->so", {
+// jsmk.WARNING(`fluidModules: ${fluidModules} ${platform}`);
+// NB: name of task is depended upon during instal+renaming.
+let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
-    deps: fluidLibs
+    deps: fluidLibs,
+    modules: fluidModules,
 });
 
 /* copy our .clap file (dll) into an app/package framework ----------- */

@@ -137,18 +137,6 @@ let t2 = m.NewTask("compile", "cpp->o", {
     searchpaths,
 });
 
-let tlib = m.NewTask("libfluidsynth", "o->a", {
-    inputs: [...t1.GetOutputs(), ...t2.GetOutputs()]
-});
-
-/* test link by building example ---*/
-let t4 = m.NewTask("example", "c->o", {
-    inputs: [
-        "../doc/examples/example.c",
-    ],
-    searchpaths,
-});
-
 let libs = {
     "darwin": [
         `${hblib}/libglib-2.0.a`,
@@ -160,11 +148,7 @@ let libs = {
     ],
 }[process.platform];
 
-let linkflags = {
-    "darwin": [
-        `-L${hblib}`
-    ],
-}[process.platform];
+m.AddLibs(libs);
 
 let frameworks = {
     "darwin" : [
@@ -173,10 +157,30 @@ let frameworks = {
     ]
 }[process.platform];
 
-// see build/doc/examples/CMakeFiles
-let t5 = m.NewTask("example", "cpp.o->exe", {
-   inputs: [...t4.GetOutputs(), ...tlib.GetOutputs()],
+let tlib = m.NewTask("libfluidsynth", "o->a", {
+    inputs: [...t1.GetOutputs(), ...t2.GetOutputs()],
+});
+m.AddFrameworks(frameworks); // so module clients are properly configured
+
+/* test link by building example ---*/
+// create a new module so that lib
+let m2 = Project.NewModule("libfluidsynthTests");
+let t4 = m2.NewTask("compile", "c->o", {
+    inputs: [
+        "../doc/examples/example.c",
+    ],
+    searchpaths,
+});
+
+let linkflags = {
+    "darwin": [
+        `-L${hblib}`
+    ],
+}[process.platform];
+
+// see build/doc/examples/CMakeFiles for link details
+let t5 = m2.NewTask("example", "cpp.o->exe", {
+   inputs: t4.GetOutputs(), 
    flags: linkflags,
-   frameworks,
-   libs,
+   modules: ["libfluidsynth"] // above
 });
