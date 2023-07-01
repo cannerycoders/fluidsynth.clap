@@ -105,38 +105,38 @@ let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     modules: fluidModules,
 });
 
-/* copy our .clap file (dll) into an app/package framework ----------- */
+/* install the _built to _install, copying on the way --- */
+m.NewTask("installLegal", "install", {
+    inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
+    installdir: jsmk.path.join(resourcesDir, "etc"),
+});
+
 switch(platform)
 {
 case "win32":
-case "linux":
-    m.NewTask("installPlu", "install", {
+    m.NewTask("installPlug", "install", {
         inputs: t2.GetOutputs(), 
         installext: ".clap", // <--------- need separate rule for other files
         installdir: "/"
     });
+    /* windows dlls can be downloaded from fluidsynth github */
     m.NewTask("installDLLs", "install", {
                 inputs: Project.Glob(`${fpkg}/bin/*.dll`),
                 installdir: "/"
             });
-    m.NewTask("installLegal", "install", {
-        inputs: ["README.md", "LICENSE", "BUILD.json"],
-        installdir: "/",
-    });
     break;
 case "darwin":
     // We only perform copy/fixup of dlls during the packaging phase.
     // This is because the stripping overlaps with the required signing.
     {
         let binDir = "Contents/MacOS";
-        let frameworksDir = "Contents/Frameworks";
         let resourcesDir = "Contents/Resources";
         let tcpy = m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <--------- need separate rule for other files
             installdir: binDir,
         });
-        /*
+        /* no frameworks atm, statically linked 
         m.NewTask("packageDLLs", "installscript", {
             ARGUMENTS: ["build/fixupDLLs.js",
                  jsmk.path.join(installRoot, frameworksDir), 
@@ -144,31 +144,26 @@ case "darwin":
                 ]
             })
         */
-        m.NewTask("installLegal", "install", {
-            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
-            installdir: jsmk.path.join(resourcesDir, "etc"),
-        });
         m.NewTask("installPkg", "install", {
             inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
             installdir: "Contents"
         });
         // osxsigning.js is where entitlements.plist is accessed.
         // https://developer.apple.com/documentation/security/hardened_runtime
-        // in order to load vst3 plugings we must:
+        // in order to load plugins we must:
         //   com.apple.security.cs.disable-library-validation true
         //   com.apple.security.device.audio-input true
         //   (nb: this is distinct from Info.plist!!!)
-
-        // and this is where notarization of signing occurs
-        /*
         m.NewTask("osxSign", "packagescript",
         {
             ARGUMENTS: [
-                "build/osxNotarize.js", appDirPath,
+                "build/osxSign.js", appDirPath,
             ]
         });
         
-        // and this is where notarization of signing occurs
+        /*
+        // and this is where notarization of signed .zip
+        // happens in reposit since packaging below
         m.NewTask("osxNotarize", "repositscript",
         {
             ARGUMENTS: [
@@ -177,6 +172,8 @@ case "darwin":
         });
         */
     }
+    break;
+case "linux":
     break;
 }
 
