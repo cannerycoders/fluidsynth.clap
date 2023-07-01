@@ -105,12 +105,6 @@ let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
     modules: fluidModules,
 });
 
-/* install the _built to _install, copying on the way --- */
-m.NewTask("installLegal", "install", {
-    inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
-    installdir: jsmk.path.join(resourcesDir, "etc"),
-});
-
 switch(platform)
 {
 case "win32":
@@ -124,6 +118,17 @@ case "win32":
                 inputs: Project.Glob(`${fpkg}/bin/*.dll`),
                 installdir: "/"
             });
+    /* install the _built to _install, copying on the way --- */
+    m.NewTask("installLegal", "install", {
+        inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
+        installdir: "etc",
+    });
+    /* finally, we zip ------------------------------- */
+    let zipfile = "fluidsynth.clap.zip";
+    m.NewTask("fluidsynthPackage", "packagescript", {
+        ARGUMENTS: ["build/zipdir.js", installRoot,
+            jsmk.path.join(installRoot, "..", zipfile)]
+    });
     break;
 case "darwin":
     // We only perform copy/fixup of dlls during the packaging phase.
@@ -148,36 +153,35 @@ case "darwin":
             inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
             installdir: "Contents"
         });
+        m.NewTask("installLegal", "install", {
+            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
+            installdir: resourcesDir,
+        });
         // https://developer.apple.com/forums/thread/130855
         //  -- only sign binaries
         //  -- only apply entitlements to apps
-        m.NewTask("osxSign", "packagescript",
+        m.NewTask("osxsign", "packagescript",
         {
             ARGUMENTS: [
-                "build/osxSign.js", appDirPath,
+                "build/darwin/osxsign.js", installRoot,
+            ]
+        });
+
+        m.NewTask("osxdmg", "packagescript", 
+        {
+            ARGUMENTS: [
+                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, installRoot+".dmg"
             ]
         });
         
-        /*
-        // and this is where notarization of signed .zip
-        // happens in reposit since packaging below
-        m.NewTask("osxNotarize", "repositscript",
+        m.NewTask("osxnotarize", "repositscript",
         {
             ARGUMENTS: [
-                "build/osxNotarize.js", appDirPath,
+                "build/osxnotarize.js", installRoot
             ]
         });
-        */
     }
     break;
 case "linux":
     break;
 }
-
-/* finally, we zip ------------------------------- */
-let zipfile = "fluidsynth.clap.zip";
-m.NewTask("fluidsynthPackage", "packagescript", {
-    ARGUMENTS: ["build/zipdir.js", installRoot,
-        jsmk.path.join(installRoot, "..", zipfile)]
-});
-
