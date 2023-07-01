@@ -65,7 +65,6 @@ let fluidSearchpaths = [`${fpkg}/include`];
 let fluidLibs = 
 {
     win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
-    darwin: [`${fpkg}/lib/libfluidsynth.dylib`],
 }[platform];
 
 let m = Project.NewModule("fluidsynth.clap");
@@ -73,6 +72,11 @@ let defs = {
     CLAP_PLUGINS_HEADLERS: null,
     CLAP_NO_YAS: null
 };
+
+Project.NewProject("libfluidsynth", {
+    ProjectDir: "fluidsynth/src",
+    ProjectFilePath: "_LibFluidSynth.jsmk",
+}).EstablishBarrier("before");
 
 let t1 = m.NewTask("compile", "cpp->o", 
 {
@@ -86,7 +90,8 @@ let t1 = m.NewTask("compile", "cpp->o",
     ],
 });
 
-let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
+
+let t2 = m.NewTask("fluidsynth.clap", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs
 });

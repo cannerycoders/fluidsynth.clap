@@ -1,0 +1,182 @@
+// To avoid DLL hell, we compile libfluidsynth.a (static library)
+// We rely on homebrew oo deliver static libs for all dependencies 
+// (glib, orbis, etc).
+// 
+// https://github.com/FluidSynth/fluidsynth/wiki/BuildingWithCMake
+//
+// pkg-config --cflags fluidsynth
+//  -I/opt/homebrew/Cellar/readline/8.2.1/include \
+//  -I/opt/homebrew/Cellar/fluid-synth/2.3.3/include \
+//  -I/opt/homebrew/Cellar/glib/2.76.3/include \
+//  -I/opt/homebrew/Cellar/glib/2.76.3/include/glib-2.0 \
+//  -I/opt/homebrew/Cellar/glib/2.76.3/lib/glib-2.0/include \
+//  -I/opt/homebrew/opt/gettext/include \
+//  -I/opt/homebrew/Cellar/pcre2/10.42/include \
+//  -I/opt/homebrew/Cellar/libsndfile/1.2.0_1/include \
+//  -I/opt/homebrew/Cellar/flac/1.4.3/include \
+//  -I/opt/homebrew/Cellar/libvorbis/1.3.7/include \
+//  -I/opt/homebrew/Cellar/libogg/1.3.5/include \
+//  -I/opt/homebrew/Cellar/opus/1.4/include/opus \
+//  -I/opt/homebrew/Cellar/mpg123/1.31.3/include \
+//  -I/opt/homebrew/Cellar/portaudio/19.7.0/include
+// 
+// pkg-config --libs fluidsynth
+// -L/opt/homebrew/Cellar/fluid-synth/2.3.3/lib -lfluidsynth
+
+let m = Project.NewModule("libfluidsynth");
+let hbcel = "/opt/homebrew/Cellar";
+let hbopt = "/opt/homebrew/opt";
+let hblib = "/opt/homebrew/lib";
+let hbinc = "/opt/homebrew/include";
+let searchpaths = [
+    "../../build/darwin", // for config.h
+    "../../build/fluid", // for pre-built (buildtime) tables
+    "../include",
+    ".",
+    "drivers",
+    "midi",
+    "rvoice",
+    "utils",
+    "synth",
+    "bindings",
+    "gentables",
+    "sfloader",
+    `${hbinc}`,
+    `${hbinc}/glib-2.0`,
+    `${hblib}/glib-2.0/include`,
+    `${hbinc}/dbus-1.0`,
+    `${hblib}/dbus-1.0/include`,
+    /*
+     // see build/src/CMakefiles/libfluidsynth-OBJ.dir/flags.make
+    `${hbcel}/readline/8.2.1/include`,
+    `${hbcel}/fluid-synth/2.3.3/include`,
+    `${hbcel}/glib/2.76.3/include`,
+    `${hbcel}/glib/2.76.3/include/glib-2.0`,
+    `${hbcel}/glib/2.76.3/lib/glib-2.0/include`,
+    `${hbopt}/gettext/include`,
+    `${hbcel}/pcre2/10.42/include`,
+    `${hbcel}/libsndfile/1.2.0_1/include`,
+    `${hbcel}/flac/1.4.3/include`,
+    `${hbcel}/libvorbis/1.3.7/include`,
+    `${hbcel}/libogg/1.3.5/include`,
+    `${hbcel}/opus/1.4/include/opus`,
+    `${hbcel}/mpg123/1.31.3/include`,
+    `${hbcel}/portaudio/19.7.0/include`,
+    `${hbcel}/dbus/1.14.8/include/dbus-1.0`,
+    `${hblib}/dbus-1.0/include`,
+    `${hbcel}/glib/2.76.3/include`,
+    `${hbcel}/glib/2.76.3/include/glib-2.0`,
+    `${hbcel}/glib/2.76.3/lib/glib-2.0/include`,
+    `${hbopt}/gettext/include`,
+    `${hbcel}/pcre2/10.42/include`,
+    `${hbcel}/libsndfile/1.2.0_1/include`,
+    `${hbcel}/flac/1.4.3/include`,
+    `${hbcel}/libvorbis/1.3.7/include`,
+    `${hbcel}/libogg/1.3.5/include`,
+    `${hbcel}/opus/1.4/include/opus`,
+    `${hbcel}/mpg123/1.31.3/include`,
+    `${hbcel}/portaudio/19.7.0/include`,
+    `${hbcel}/dbus/1.14.8/include/dbus-1.0`,
+    `${hblib}/dbus-1.0/include`,
+    */
+];
+
+let t1 = m.NewTask("compile", "c->o", {
+    inputs: [ // see src/CMakeLists.txt
+        "utils/fluid_conv.c",
+        "utils/fluid_hash.c",
+        "utils/fluid_list.c",
+        "utils/fluid_ringbuffer.c",
+        "utils/fluid_settings.c",
+        "utils/fluid_sys.c",
+        "sfloader/fluid_defsfont.c",
+        "sfloader/fluid_sfont.c",
+        "sfloader/fluid_sffile.c",
+        "sfloader/fluid_samplecache.c",
+        "rvoice/fluid_adsr_env.c",
+        "rvoice/fluid_chorus.c",
+        "rvoice/fluid_iir_filter.c",
+        "rvoice/fluid_lfo.c",
+        "rvoice/fluid_rvoice.c",
+        "rvoice/fluid_rvoice_dsp.c",
+        "rvoice/fluid_rvoice_event.c",
+        "rvoice/fluid_rvoice_mixer.c",
+        "rvoice/fluid_rev.c",
+        "synth/fluid_chan.c",
+        "synth/fluid_event.c",
+        "synth/fluid_gen.c",
+        "synth/fluid_mod.c",
+        "synth/fluid_synth.c",
+        "synth/fluid_synth_monopoly.c",
+        "synth/fluid_tuning.c",
+        "synth/fluid_voice.c",
+        "midi/fluid_midi.c",
+        "midi/fluid_midi_router.c",
+        "midi/fluid_seqbind.c",
+        "midi/fluid_seq.c",
+        "drivers/fluid_adriver.c",
+        "drivers/fluid_mdriver.c",
+        "bindings/fluid_cmd.c",
+        "bindings/fluid_filerenderer.c",
+        "bindings/fluid_ladspa.c",
+        // MacOS
+        "drivers/fluid_coreaudio.c",
+        "drivers/fluid_coremidi.c",
+        "drivers/fluid_aufile.c",
+        // dbus
+        "bindings/fluid_rtkit.c"
+    ],
+    searchpaths,
+});
+
+let t2 = m.NewTask("compile", "cpp->o", {
+    inputs: [
+        "midi/fluid_seqbind_notes.cpp",
+        "midi/fluid_seq_queue.cpp"
+    ],
+    searchpaths,
+});
+
+let tlib = m.NewTask("libfluidsynth", "o->a", {
+    inputs: [...t1.GetOutputs(), ...t2.GetOutputs()]
+});
+
+/* test link by building example ---*/
+let t4 = m.NewTask("example", "c->o", {
+    inputs: [
+        "../doc/examples/example.c",
+    ],
+    searchpaths,
+});
+
+let libs = {
+    "darwin": [
+        `${hblib}/libglib-2.0.a`,
+        `${hblib}/libintl.a`,
+        `${hblib}/libdbus-1.a`,
+        "-liconv",
+        // `${hblib}/libsndfile.a`,
+        // `${hbcel}/readline/8.2.1/lib/libreadline.a`
+    ],
+}[process.platform];
+
+let linkflags = {
+    "darwin": [
+        `-L${hblib}`
+    ],
+}[process.platform];
+
+let frameworks = {
+    "darwin" : [
+        "AudioUnit", "CoreAudio", "CoreMIDI", "CoreFoundation", "IOKit",
+        "Carbon", "AppKit", "Foundation"
+    ]
+}[process.platform];
+
+// see build/doc/examples/CMakeFiles
+let t5 = m.NewTask("example", "cpp.o->exe", {
+   inputs: [...t4.GetOutputs(), ...tlib.GetOutputs()],
+   flags: linkflags,
+   frameworks,
+   libs,
+});
