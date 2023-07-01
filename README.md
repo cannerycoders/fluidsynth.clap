@@ -125,8 +125,7 @@ plugin you need only download the latest .zip file and decompress it
 into a standard CLAP location (system or user).
 
 Depending on your CLAP host and platform security settings, you may still need
-to add the location of `fluidsynth.clap` to `PATH`, and/or 
-`LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH`.
+to add the location of `fluidsynth.clap` to `PATH`, and/or `LD_LIBRARY_PATH`.
 
 If you wish to build or download fluidsynth yourself, please proceed to
 the platform-specific instructions that follow.
@@ -162,8 +161,11 @@ sudo apt-get install libfluidsynth-dev`
 
 ### macos
 
-MacOS users either obtain the fluidsynth dlls with this fluidsynth plugin 
-distribution or build/install them following the developer procedure below.
+MacOS users either obtain the fluidsynth runtime with this fluidsynth plugin 
+distribution (statically linked) or build/install them following the 
+developer procedure below.  If you take the second road, the result may
+only run on your own development machine due to MacOS security and
+external DLL dependencies.
 
 This requires that you install [homebrew](https://brew.sh).
 
@@ -205,5 +207,6 @@ Binaries provided via releases may include components with different licenses.
 Fluidsynth is GPL2, license found [here](https://github.com/FluidSynth/fluidsynth/blob/master/LICENSE).
 Fluidsynth relies on other components subject to their own licenses.
 
-The Clap plugin API is MIT licensed, licenses found [here](https://github.com/free-audio/clap/blob/main/LICENSE)
-and [here](https://github.com/free-audio/clap-helpers/blob/main/LICENSE)
+The Clap plugin API is MIT licensed, licenses found
+[here](https://github.com/free-audio/clap/blob/main/LICENSE)
+and [here](https://github.com/free-audio/clap-helpers/blob/main/LICENSE).

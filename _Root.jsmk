@@ -148,12 +148,9 @@ case "darwin":
             inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
             installdir: "Contents"
         });
-        // osxsigning.js is where entitlements.plist is accessed.
-        // https://developer.apple.com/documentation/security/hardened_runtime
-        // in order to load plugins we must:
-        //   com.apple.security.cs.disable-library-validation true
-        //   com.apple.security.device.audio-input true
-        //   (nb: this is distinct from Info.plist!!!)
+        // https://developer.apple.com/forums/thread/130855
+        //  -- only sign binaries
+        //  -- only apply entitlements to apps
         m.NewTask("osxSign", "packagescript",
         {
             ARGUMENTS: [
