@@ -1,20 +1,19 @@
 # fluidsynth.clap plugin 
 
-- [fluidsynth.clap plugin](#fluidsynthclap-plugin)
-  - [intro](#intro)
-  - [install with fluidsynth](#install-with-fluidsynth)
-  - [presets, soundfonts](#presets-soundfonts)
-  - [state save/restore](#state-saverestore)
-  - [parameters](#parameters)
-  - [see also](#see-also)
-  - [devinstall](#devinstall)
-    - [win32](#win32)
-    - [linux](#linux)
-    - [macos](#macos)
-  - [implementation notes](#implementation-notes)
-    - [todo](#todo)
-  - [buyer beware](#buyer-beware)
-  - [license](#license)
+- [intro](#intro)
+- [install with fluidsynth](#install-with-fluidsynth)
+- [presets, soundfonts](#presets-soundfonts)
+- [state save/restore](#state-saverestore)
+- [parameters](#parameters)
+- [see also](#see-also)
+- [devinstall](#devinstall)
+  - [win32](#win32)
+  - [linux](#linux)
+  - [macos](#macos)
+- [implementation notes](#implementation-notes)
+  - [todo](#todo)
+- [buyer beware](#buyer-beware)
+- [license](#license)
 
 ## intro
 
@@ -47,7 +46,7 @@ To make any sound using fluidsynth you must load a soundfont file.
 A default soundfont may not be available on your system but soundfont 
 files can easily be found on the internet. The go-to starter soundfont 
 is `FluidR3_GM.sf2`. `fluidsynth.clap` looks for a default soundfont 
-according to these platform specific conventions:
+according to these platform-specific conventions:
 
 | platform | type   | location                                               |
 | :------- | :----- | :----------------------------------------------------- |
@@ -64,7 +63,7 @@ to request an alternate soundfont file.  In other words, `.sf2` files *are*
 the preset files compatible with this plugin.  To load a soundfont you should 
 be able to request a preset load via your favorite CLAP host application.
 
-Here are a few sources of starter soundfonts
+Here are a few sources of free soundfonts:
 
 * [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
 * [Fatboy](https://fatboy.site/)
@@ -160,6 +159,10 @@ And to obtain the compile/API support:
 ```sh
 sudo apt-get install libfluidsynth-dev
 ```
+
+That said, we employ fluidsynth API version 2.3.X.  If your linux
+distro is conservative, it's possible you won't be able to compile
+without upgrading your libfluidsynth package(s).
 
 ### macos
 
