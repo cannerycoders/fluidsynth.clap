@@ -23,7 +23,7 @@
  */
 let pkgj = jsmk.file.read(jsmk.path.join(Project.ProjectDir, "package.json"));
 let pkg = JSON.parse(pkgj);
-let appName = pkg.name;
+let appName = pkg.label;
 let appVers = pkg.version;
 
 Project.EstablishDomain(appName, /(vs|gcc|clang)/,
@@ -74,16 +74,19 @@ let fluidModules =
 }[platform];
 
 
-let m = Project.NewModule("fluidsynth.clap");
+if(platform == "darwin")
+{
+    Project.NewProject("libfluidsynthProj", {
+        ProjectDir: "fluidsynth/src",
+        ProjectFilePath: "_LibFluidSynth.jsmk",
+    }).EstablishBarrier("after");
+}
+
+let m = Project.NewModule(appName);
 let defs = {
     CLAP_PLUGINS_HEADLERS: null,
     CLAP_NO_YAS: null
 };
-
-Project.NewProject("libfluidsynthProj", {
-    ProjectDir: "fluidsynth/src",
-    ProjectFilePath: "_LibFluidSynth.jsmk",
-}).EstablishBarrier("after");
 
 let t1 = m.NewTask("compile", "cpp->o", 
 {
@@ -125,7 +128,7 @@ case "win32":
         installdir: "etc",
     });
     /* finally, we zip ------------------------------- */
-    let zipfile = "fluidsynth.clap.zip";
+    let zipfile = `${appName}.zip`;
     m.NewTask("fluidsynthPackage", "packagescript", {
         ARGUMENTS: ["build/zipdir.js", installRoot,
             jsmk.path.join(installRoot, "..", zipfile)]

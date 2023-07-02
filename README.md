@@ -155,7 +155,7 @@ sudo apt-get install fluidsynth fluid-soundfont-gm
 And to obtain the compile/API support:
 
 ```sh
-sudo apt-get install libfluidsynth-dev`
+sudo apt-get install libfluidsynth-dev
 ```
 
 ### macos
