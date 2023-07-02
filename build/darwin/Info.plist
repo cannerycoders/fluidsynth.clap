@@ -14,11 +14,13 @@
 
 	<key>CFBundleName</key><string>FluidSynth.clap</string>
 	<key>CFBundlePackageType</key><string>BNDL</string>
-
+	<key>CFBundleSignature</key>
+    <string>????</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>MacOSX</string>
 	</array>
 	<key>CSResourcesFileMapped</key><true/>
+	<key>NSHumanReadableCopyright</key> <string></string>
 </dict>
 </plist>
