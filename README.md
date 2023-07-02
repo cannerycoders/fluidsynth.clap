@@ -1,19 +1,20 @@
 # fluidsynth.clap plugin 
 
-- [intro](#intro)
-- [install with fluidsynth](#install-with-fluidsynth)
-- [presets, soundfonts](#presets-soundfonts)
-- [state save/restore](#state-saverestore)
-- [parameters](#parameters)
-- [see also](#see-also)
-- [devinstall](#devinstall)
-  - [win32](#win32)
-  - [linux](#linux)
-  - [macos](#macos)
-- [implementation notes](#implementation-notes)
-  - [todo](#todo)
-- [buyer beware](#buyer-beware)
-- [license](#license)
+- [fluidsynth.clap plugin](#fluidsynthclap-plugin)
+  - [intro](#intro)
+  - [install with fluidsynth](#install-with-fluidsynth)
+  - [presets, soundfonts](#presets-soundfonts)
+  - [state save/restore](#state-saverestore)
+  - [parameters](#parameters)
+  - [see also](#see-also)
+  - [devinstall](#devinstall)
+    - [win32](#win32)
+    - [linux](#linux)
+    - [macos](#macos)
+  - [implementation notes](#implementation-notes)
+    - [todo](#todo)
+  - [buyer beware](#buyer-beware)
+  - [license](#license)
 
 ## intro
 
@@ -51,10 +52,12 @@ according to these platform specific conventions:
 | platform | type   | location                                               |
 | :------- | :----- | :----------------------------------------------------- |
 | Windows  | system | C:/Program Files/Common Files/Sounds/Banks/default.sf2 |
-| Windows  | user   | $LOCALAPPDATA/Sounds/Banks/default.sf2           |
+| Windows  | user   | $LOCALAPPDATA/Sounds/Banks/default.sf2                 |
 | MacOS    | system | /Library/Audio/Sounds/Banks/default.sf2                |
 | MacOS    | user   | $HOME/Library/Audio/Sounds/Banks/default.sf2           |
 | Linux    | system | /usr/share/sounds/sf2/default.sf2                      |
+| Linux    | custom | /usr/local/share/sounds/sf2/default.sf2                |
+| Linux    | user   | $HOME/Documents/sounds/sf2/default.sf2                |
 
 To override these defaults, we employ CLAP's _preset extension_ to allow you 
 to request an alternate soundfont file.  In other words, `.sf2` files *are* 

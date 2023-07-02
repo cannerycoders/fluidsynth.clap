@@ -58,6 +58,7 @@ let installRoot = Project.EvaluateBuildVar("InstallDir");
 
 let fpkg = {
     win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
+    linux: "_prebuilt/fluidsynth-2.3.3-linux-x64",
     darwin: "/opt/homebrew",
     // win32: "_prebuilt/fluidsynth-dev-win10-x64"
 }[platform];
@@ -65,6 +66,7 @@ let fluidSearchpaths = [`${fpkg}/include`];
 let fluidLibs = 
 {
     win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
+    linux: [`${fpkg}/lib/libfluidsynth.so.3`],
     darwin: [],
 }[platform];
 
@@ -74,7 +76,7 @@ let fluidModules =
 }[platform];
 
 
-if(platform == "darwin")
+if(platform == "darwin") // see build/*/notes.md
 {
     Project.NewProject("libfluidsynthProj", {
         ProjectDir: "fluidsynth/src",
@@ -103,36 +105,47 @@ let t1 = m.NewTask("compile", "cpp->o",
 // jsmk.WARNING(`fluidModules: ${fluidModules} ${platform}`);
 // NB: name of task is depended upon during install+renaming.
 // NB2: the name of the install dir is governed by package.json (see top)
+let linkflags = {
+    darwin: [],
+    win32: [],
+    linux: ["-Wl,-rpath=$ORIGIN"]
+}[platform];
+
 let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs,
     modules: fluidModules,
+    flags: linkflags,
 });
 
 switch(platform)
 {
+case "linux":
 case "win32":
-    m.NewTask("installPlug", "install", {
-        inputs: t2.GetOutputs(), 
-        installext: ".clap", // <--------- need separate rule for other files
-        installdir: "/"
-    });
-    /* windows dlls can be downloaded from fluidsynth github */
-    m.NewTask("installDLLs", "install", {
-                inputs: Project.Glob(`${fpkg}/bin/*.dll`),
-                installdir: "/"
-            });
-    /* install the _built to _install, copying on the way --- */
-    m.NewTask("installLegal", "install", {
-        inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
-        installdir: "etc",
-    });
-    /* finally, we zip ------------------------------- */
-    let zipfile = `${appName}.zip`;
-    m.NewTask("fluidsynthPackage", "packagescript", {
-        ARGUMENTS: ["build/zipdir.js", installRoot,
-            jsmk.path.join(installRoot, "..", zipfile)]
-    });
+    {
+        let dsoGlob = (platform == "linux") ? "lib/*so*" : "bin/*.dll";
+        m.NewTask("installPlug", "install", {
+            inputs: t2.GetOutputs(), 
+            installext: ".clap", // <--------- need separate rule for other files
+            installdir: "/"
+        });
+        /* windows dlls can be downloaded from fluidsynth github */
+        m.NewTask("installDLLs", "install", {
+                    inputs: Project.Glob(`${fpkg}/${dsoGlob}`),
+                    installdir: "/"
+                });
+        /* install the _built to _install, copying on the way --- */
+        m.NewTask("installLegal", "install", {
+            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
+            installdir: "etc",
+        });
+        /* finally, we zip ------------------------------- */
+        let zipfile = `${appName}.zip`;
+        m.NewTask("fluidsynthPackage", "packagescript", {
+            ARGUMENTS: ["build/zipdir.js", installRoot,
+                jsmk.path.join(installRoot, "..", zipfile)]
+        });
+    }
     break;
 case "darwin":
     // We only perform copy/fixup of dlls during the packaging phase.
@@ -185,7 +198,5 @@ case "darwin":
             ]
         });
     }
-    break;
-case "linux":
     break;
 }
