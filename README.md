@@ -1,4 +1,4 @@
-# fluidsynth.clap plugin 
+# FluidSynth.clap plugin 
 
 - [intro](#intro)
 - [install with fluidsynth](#install-with-fluidsynth)
@@ -17,7 +17,7 @@
 
 ## intro
 
-`fluidsynth.clap` is a simple, open source, "headless" (no GUI) bridge to 
+`FluidSynth.clap` is a simple, open source, "headless" (no GUI) bridge to 
 the [fluidsynth soundfont synthesizer](https://fluidsynth.org) in the 
 form of a [CLAP plugin](https://github.com/free-audio/clap).
 
@@ -63,7 +63,7 @@ to request an alternate soundfont file.  In other words, `.sf2` files *are*
 the preset files compatible with this plugin.  To load a soundfont you should 
 be able to request a preset load via your favorite CLAP host application.
 
-Here are a few sources of free soundfonts:
+Here are a few sources for free soundfonts:
 
 * [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
 * [Fatboy](https://fatboy.site/)
@@ -197,6 +197,9 @@ using your favorite build system.
 * Most fluidsynth effects parameter changes are thread-safe but may cause
 glitches when performed during audio processing.  Value changes
 could (should?) trigger a reactivate request.
+
+* implement more CCs following the pattern implemented in
+  [juicysfplugin](https://github.com/Birch-san/juicysfplugin).
 
 ## buyer beware
 
