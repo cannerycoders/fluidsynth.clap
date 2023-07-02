@@ -5,6 +5,7 @@
 #include <string>
 #include <cassert>
 #include <iostream>
+#include <string.h> // strstr on linux
 
 static std::string g_pluginPath;
 

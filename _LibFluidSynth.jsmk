@@ -24,28 +24,18 @@
 // -L/opt/homebrew/Cellar/fluid-synth/2.3.3/lib -lfluidsynth
 
 let m = Project.NewModule("libfluidsynth");
-let hbcel = "/opt/homebrew/Cellar";
-let hbopt = "/opt/homebrew/opt";
-let hblib = "/opt/homebrew/lib";
-let hbinc = "/opt/homebrew/include";
-let searchpaths = [
-    "../../build/darwin", // for config.h
-    "../../build/fluid", // for pre-built (buildtime) tables
-    "../include",
-    ".",
-    "drivers",
-    "midi",
-    "rvoice",
-    "utils",
-    "synth",
-    "bindings",
-    "gentables",
-    "sfloader",
-    `${hbinc}`,
-    `${hbinc}/glib-2.0`,
-    `${hblib}/glib-2.0/include`,
-    `${hbinc}/dbus-1.0`,
-    `${hblib}/dbus-1.0/include`,
+let inc = "/usr/include";
+let lib = "/usr/lib/x86_64-linux-gnu"; // -L
+let libinc = "/usr/lib"
+let platformSource;
+if(process.platform == "darwin")
+{
+    let hbcel = "/opt/homebrew/Cellar";
+    let hbopt = "/opt/homebrew/opt";
+    let hblib = "/opt/homebrew/lib";
+    let hbinc = "/opt/homebrew/include";
+    lib = hblib;
+    inc = hbinc;
     /*
      // see build/src/CMakefiles/libfluidsynth-OBJ.dir/flags.make
     `${hbcel}/readline/8.2.1/include`,
@@ -79,6 +69,39 @@ let searchpaths = [
     `${hbcel}/dbus/1.14.8/include/dbus-1.0`,
     `${hblib}/dbus-1.0/include`,
     */
+    // MacOS
+    platformSrc = [
+        "drivers/fluid_coreaudio.c",
+        "drivers/fluid_coremidi.c",
+        "drivers/fluid_aufile.c",
+    ];
+}
+else
+{
+    platformSrc = [
+        "drivers/fluid_pulse.c",
+        "drivers/fluid_alsa.c",
+        "drivers/fluid_jack.c",
+    ];
+}
+let searchpaths = [
+    `../../build/${process.platform}`, // for config.h
+    "../../build/fluid", // for pre-built (buildtime) tables
+    "../include",
+    ".",
+    "drivers",
+    "midi",
+    "rvoice",
+    "utils",
+    "synth",
+    "bindings",
+    "gentables",
+    "sfloader",
+    `${inc}`,
+    `${inc}/glib-2.0`,
+    `${lib}/glib-2.0/include`,
+    `${inc}/dbus-1.0`,
+    `${lib}/dbus-1.0/include`,
 ];
 
 let t1 = m.NewTask("compile", "c->o", {
@@ -119,12 +142,9 @@ let t1 = m.NewTask("compile", "c->o", {
         "bindings/fluid_cmd.c",
         "bindings/fluid_filerenderer.c",
         "bindings/fluid_ladspa.c",
-        // MacOS
-        "drivers/fluid_coreaudio.c",
-        "drivers/fluid_coremidi.c",
-        "drivers/fluid_aufile.c",
         // dbus
-        "bindings/fluid_rtkit.c"
+        "bindings/fluid_rtkit.c",
+        ...platformSrc,
     ],
     searchpaths,
 });
@@ -139,13 +159,25 @@ let t2 = m.NewTask("compile", "cpp->o", {
 
 let libs = {
     "darwin": [
-        `${hblib}/libglib-2.0.a`,
-        `${hblib}/libintl.a`,
-        `${hblib}/libdbus-1.a`,
+        `${lib}/libglib-2.0.a`,
+        `${lib}/libintl.a`,
+        `${lib}/libdbus-1.a`,
         "-liconv",
         // `${hblib}/libsndfile.a`,
         // `${hbcel}/readline/8.2.1/lib/libreadline.a`
     ],
+    "linux": [
+        `-L${lib}`,
+        "libsndfile.so",
+        "-lgobject-2.0",
+        "-lglib-2.0",
+        "-lgthread-2.0",
+        "-lpcre",
+        "-lalsa",
+        "-lpulse",
+        "-ljack",
+
+    ]
 }[process.platform];
 
 m.AddLibs(libs);
@@ -160,7 +192,7 @@ let frameworks = {
 let tlib = m.NewTask("libfluidsynth", "o->a", {
     inputs: [...t1.GetOutputs(), ...t2.GetOutputs()],
 });
-m.AddFrameworks(frameworks); // so module clients are properly configured
+m.AddFrameworks(frameworks); // so module clients are properly c
 
 /* test link by building example ---*/
 // create a new module so that lib
@@ -174,7 +206,7 @@ let t4 = m2.NewTask("compile", "c->o", {
 
 let linkflags = {
     "darwin": [
-        `-L${hblib}`
+        `-L${lib}`
     ],
 }[process.platform];
 
