@@ -1,5 +1,5 @@
 {
-  "name": "fluidsynth.clap",
+  "name": "FluidSynth.clap",
   "version": "0.1.0",
   "description": "CLAP bridge to open source audio soundfont synthesizer",
   "scripts": {

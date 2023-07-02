@@ -98,8 +98,9 @@ let t1 = m.NewTask("compile", "cpp->o",
 });
 
 // jsmk.WARNING(`fluidModules: ${fluidModules} ${platform}`);
-// NB: name of task is depended upon during instal+renaming.
-let t2 = m.NewTask("fluidsynth", "cpp.o->so", {
+// NB: name of task is depended upon during install+renaming.
+// NB2: the name of the install dir is governed by package.json (see top)
+let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs,
     modules: fluidModules,
@@ -170,7 +171,7 @@ case "darwin":
         m.NewTask("osxdmg", "packagescript", 
         {
             ARGUMENTS: [
-                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, installRoot+".dmg"
+                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", installRoot+".dmg"
             ]
         });
         
