@@ -7,8 +7,8 @@
 	<key>LSMinimumSystemVersion</key><string>11.00</string>
 
 	<key>CFBundleDevelopmentRegion</key> <string>English</string>
-	<key>CFBundleExecutable</key> <string>fluidsynth.clap</string>
-	<key>CFBundleIconFile</key> <string>fluidsynth.icns</string>
+	<key>CFBundleExecutable</key> <string>FluidSynth.clap</string>
+	<key>CFBundleIconFile</key> <string>clap.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.cannerycoders.clap.fluidsynth</string>
 
