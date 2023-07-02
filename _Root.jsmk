@@ -154,7 +154,7 @@ case "darwin":
             installdir: "Contents"
         });
         m.NewTask("installLegal", "install", {
-            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
+            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses", "build/darwin/clap.icns"],
             installdir: resourcesDir,
         });
         // https://developer.apple.com/forums/thread/130855
