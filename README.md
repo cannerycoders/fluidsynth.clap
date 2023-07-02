@@ -194,12 +194,15 @@ using your favorite build system.
 
 ### todo
 
+* implement an appropriately simple GUI.
+
+* implement more CCs following the pattern implemented in
+  [juicysfplugin](https://github.com/Birch-san/juicysfplugin).
+
 * Most fluidsynth effects parameter changes are thread-safe but may cause
 glitches when performed during audio processing.  Value changes
 could (should?) trigger a reactivate request.
 
-* implement more CCs following the pattern implemented in
-  [juicysfplugin](https://github.com/Birch-san/juicysfplugin).
 
 ## buyer beware
 
