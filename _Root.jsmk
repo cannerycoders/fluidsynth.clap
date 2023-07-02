@@ -178,7 +178,7 @@ case "darwin":
         m.NewTask("osxnotarize", "repositscript",
         {
             ARGUMENTS: [
-                "build/osxnotarize.js", installRoot
+                "build/darwin/osxnotarize.js", installRoot+".dmg"
             ]
         });
     }

@@ -5,7 +5,6 @@
 - [presets, soundfonts](#presets-soundfonts)
 - [state save/restore](#state-saverestore)
 - [parameters](#parameters)
-- [soundfonts](#soundfonts)
 - [see also](#see-also)
 - [devinstall](#devinstall)
   - [win32](#win32)
@@ -24,10 +23,10 @@ form of a [CLAP plugin](https://github.com/free-audio/clap).
 
 ## install with fluidsynth
 
-In our releases section you can find a .zip file that includes 
-both the fluidsynth.clap plugin _and_ the fluidsynth runtime 
-components.  Unzip the file into one of these standard CLAP plugin
-locations.  
+In our github releases you can find a .zip or .dmg file that 
+includes both the fluidsynth.clap plugin _and_ the fluidsynth runtime 
+components.  Download, then unpack the file into one of these standard 
+CLAP plugin locations.  
 
 | platform | type   | typical path                       |
 | :------- | :----- | :--------------------------------- |
@@ -62,17 +61,26 @@ to request an alternate soundfont file.  In other words, `.sf2` files *are*
 the preset files compatible with this plugin.  To load a soundfont you should 
 be able to request a preset load via your favorite CLAP host application.
 
+Here are a few sources of starter soundfonts
+
+* [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
+* [Fatboy](https://fatboy.site/)
+* [MuseScore links](https://musescore.org/en/handbook/soundfonts-and-sfz-files#list)
+* [FlameStudios guitar soundfonts](http://www.flamestudios.org/free/Soundfonts)
+
 ## state save/restore
 
 We support the `clap.state` extension but since the state includes
-the filepath to the active soundfont state files may not be
-terribly portable.
+the filepath to the active soundfont, state files may not be
+perfectly portable.
 
 ## parameters
 
 In typical usage, `fluidsynth` exposes a large collection of "canned" instrument
 sounds that are selected by the instrument index. Thus, very little user-interface
-is required. Just select instrument/bank indices in your sound font.
+is required. Just select instrument/bank indices in your sound font. Most CLAP
+hosts offer a stripped-down parameter editing interface which should suffice to
+select different gain and program settings.
 
 The [General Midi standard](https://cannerycoders.com/docs/fiddle/reference/midiGM1.html)
 defines a standard mapping between an index and an instrument. Soundfonts
@@ -98,15 +106,6 @@ Here are the exposed/supported fluidsynth parameters and their ids.
 | 48-63    | bank associated with midi chans 0-15    | 0-127       | 0       |
 
 More details on these settings can be found [in the fluidsynth docs](https://www.fluidsynth.org/api/settings_synth.html).
-
-## soundfonts
-
-Here are a few sources of starter soundfonts
-
-* [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
-* [Fatboy](https://fatboy.site/)
-* [MuseScore links](https://musescore.org/en/handbook/soundfonts-and-sfz-files#list)
-* [FlameStudios guitar soundfonts](http://www.flamestudios.org/free/Soundfonts)
 
 ## see also
 

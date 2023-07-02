@@ -10,6 +10,13 @@ if(process.argv.length != 6)
 }
 let [_0, _1, pluginName, inputDir, installHelp, dmgPath] = process.argv;
 
+let applicationId = process.env.APPLEID_APPLICATION;
+if(!applicationId)
+{
+    console.error("ERROR osxpackager requires APPLEID_APPLICATION");
+    process.exit(-1);
+}
+
 let cfg = {
     target: dmgPath,
     basepath: ".",
@@ -22,7 +29,10 @@ let cfg = {
             { "x": 415, "y": 375, "type": "link", "path": "/Library/Audio/Plug-Ins/CLAP" },
             { "x": 20, "y": 375, "type": "file", "path": installHelp },
             { "x": 185, "y": 375, "type": "file", "path": inputDir },
-        ]
+        ],
+        "code-sign": {
+            "signing-identity": applicationId,
+        }
     },
 };
 

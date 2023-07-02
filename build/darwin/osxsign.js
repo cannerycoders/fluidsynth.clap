@@ -26,7 +26,7 @@ if(process.argv.length != 3)
 }
 let projRoot = process.argv[2];
 let arglist = [
-    "--force", "-s", devId, "--deep", "--strict", "--timestamp",
+    "--force", "-s", devId, "--deep", "--strict", "--options=runtime", "--timestamp",
     projRoot,
 ];
 
