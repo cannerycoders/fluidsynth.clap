@@ -31,7 +31,9 @@ FluidsynthPlugin::FluidsynthPlugin(
         Plugin(&s_descriptor, host),
         m_settings(nullptr),
         m_synth(nullptr),
-        m_pluginPath(pluginPath)
+        m_pluginPath(pluginPath),
+        m_window(nullptr),
+        m_webview(nullptr)
 {
     #ifdef _WIN32
     char const *appdata = getenv("LOCALAPPDATA");

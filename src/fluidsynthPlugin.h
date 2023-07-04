@@ -5,6 +5,12 @@
 #include <clap/helpers/plugin.hh>
 #include <clap/helpers/misbehaviour-handler.hh>
 #include <clap/helpers/checking-level.hh>
+
+#include <choc/platform/choc_Platform.h>
+#include <choc/platform/choc_Assert.h>
+#include <choc/gui/choc_DesktopWindow.h>
+#include <choc/gui/choc_WebView.h>
+
 #include <string>
 #include <filesystem> // c++17 dependency
 
@@ -86,9 +92,32 @@ public:
     bool stateSave(const clap_ostream *stream) noexcept override; 
     bool stateLoad(const clap_istream *stream) noexcept override; 
 
+    /* -- gui ------------------------------------------------------- */
+    virtual bool implementsGui() const noexcept override { return true; }
+    virtual bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
+    virtual bool guiGetPreferredApi(const char **api, bool *is_floating) noexcept override;
+    virtual bool guiCreate(const char *api, bool isFloating) noexcept override; 
+    virtual void guiDestroy() noexcept override;
+    virtual bool guiSetScale(double scale) noexcept override;
+    virtual bool guiShow() noexcept override;
+    virtual bool guiHide() noexcept override;
+    virtual bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override;
+    virtual bool guiCanResize() const noexcept override;
+    virtual bool guiGetResizeHints(clap_gui_resize_hints_t *hints) noexcept override;
+    virtual bool guiAdjustSize(uint32_t *width, uint32_t *height) noexcept override;
+    virtual bool guiSetSize(uint32_t width, uint32_t height) noexcept override;
+    virtual void guiSuggestTitle(const char *title) noexcept override;
+    virtual bool guiSetParent(const clap_window *window) noexcept override;
+    virtual bool guiSetTransient(const clap_window *window) noexcept override;
+
 private:
     void processEvent(const clap_event_header_t *hdr);
     void setParamValue(int paramid, double value);
+    uint32_t m_guiSize[2];
+
+private:
+    choc::ui::DesktopWindow *m_window;
+    choc::ui::WebView *m_webview; // null unless InitWebview
 
 private:
     fluid_settings_t *m_settings;

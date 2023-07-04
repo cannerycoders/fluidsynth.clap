@@ -75,6 +75,16 @@ let fluidModules =
     darwin: ["libfluidsynth"]
 }[platform];
 
+let guiLibs =
+{
+    win32: [
+        "dwmapi.lib",
+        "kernel32.lib",
+        "shell32.lib",
+        "ole32.lib",
+        "user32.lib",
+    ],
+}[platform];
 
 if(platform == "darwin") // see build/*/notes.md
 {
@@ -99,6 +109,7 @@ let t1 = m.NewTask("compile", "cpp->o",
         `clap/include`,
         `clap-helpers/include`,
         ...fluidSearchpaths,
+        ".", // for choc
     ],
 });
 
@@ -116,6 +127,7 @@ let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     deps: fluidLibs,
     modules: fluidModules,
     flags: linkflags,
+    libs: guiLibs,
 });
 
 switch(platform)
