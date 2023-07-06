@@ -14,7 +14,7 @@
  *     fluidsynth.clap/  <-- a directory/bundle
  *          Contents/
  *          MacOS/
- *              fluidsynth.clap <-- the real clap plugin
+ *              fluidsynth <-- the real clap plugin (shouldn't include .clap)
  *          PkgInfo
  *          Resources/
  *             clap.icns
@@ -155,7 +155,7 @@ case "darwin":
         let resourcesDir = "Contents/Resources";
         let tcpy = m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
-            installext: ".clap", // <--------- need separate rule for other files
+            installext: "", // <--------- need separate rule for other files
             installdir: binDir,
         });
         /* no frameworks atm, statically linked 
