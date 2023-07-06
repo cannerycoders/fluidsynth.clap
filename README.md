@@ -68,7 +68,7 @@ Here are a few sources for free soundfonts:
 * [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
 * [Fatboy](https://fatboy.site/)
 * [MuseScore links](https://musescore.org/en/handbook/soundfonts-and-sfz-files#list)
-* [FlameStudios guitar soundfonts](http://www.flamestudios.org/free/Soundfonts)
+* [FlameStudios guitar soundfonts](https://www.hedsound.com/2019/07/flamestudios-guitar-soundfonts-in-sf2.html)
 
 ## state save/restore
 

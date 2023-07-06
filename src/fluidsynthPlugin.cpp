@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-static char const *s_features[] = 
+static char const *s_features[] =  // just for indexing, no functional value
 {
     CLAP_PLUGIN_FEATURE_INSTRUMENT, 
     CLAP_PLUGIN_FEATURE_STEREO, 
@@ -21,7 +21,7 @@ clap_plugin_descriptor_t const FluidsynthPlugin::s_descriptor =
    "https://fluidsynth.org",
    "https://fluidsynth.org/documentation",
    "https://fluidsynth.org",
-   "2.3.2",
+   "2.3.3",
    "FluidSynth CLAP plugin.",
    s_features, 
 };
@@ -32,7 +32,6 @@ FluidsynthPlugin::FluidsynthPlugin(
         m_settings(nullptr),
         m_synth(nullptr),
         m_pluginPath(pluginPath),
-        m_window(nullptr),
         m_webview(nullptr)
 {
     #ifdef _WIN32
@@ -67,6 +66,7 @@ FluidsynthPlugin::FluidsynthPlugin(
         m_verbosity = 2;
     else
         m_verbosity = 0;
+
 }
 
 FluidsynthPlugin::~FluidsynthPlugin()
@@ -78,6 +78,8 @@ FluidsynthPlugin::~FluidsynthPlugin()
         delete_fluid_synth(m_synth);
         delete_fluid_settings(m_settings);
     }
+    if(m_webview)
+        delete m_webview;
 }
 
 /* clap plugin -------------------------------------------------------------- */
@@ -490,10 +492,11 @@ FluidsynthPlugin::paramsCount() const noexcept
 bool 
 FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
 {
+    bool found = false;
     if(paramIndex < k_indexedParamCount)
     {
         *info = s_fluidParams[paramIndex];
-        return true;
+        found = true;
     }
     else
     {
@@ -512,8 +515,11 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
             info->id += chan;
             snprintf(info->name, sizeof(info->name), "bank%d", chan);
         }
-        return true;
+        found = true;
     }
+    if(found)
+        m_paramValues[info->id] = info->default_value;
+    return found;
 } 
 
 /// The host can at any time read parameters' value on the [main-thread] using
@@ -527,6 +533,11 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
 bool 
 FluidsynthPlugin::paramsValue(clap_id paramid, double *value) noexcept
 {
+    if(!m_synth)
+    {
+        *value = m_paramValues[paramid];
+        return true;
+    }
     if(paramid == k_Gain)
         *value = m_gain;
     else

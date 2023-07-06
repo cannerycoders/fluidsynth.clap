@@ -13,6 +13,7 @@
 
 #include <string>
 #include <filesystem> // c++17 dependency
+#include <map>
 
 /* ---------------------------------------------------------------------- */
 // our instances are created by the factory in dllMain
@@ -81,6 +82,8 @@ public:
     bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override;
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override;
 
+    int paramIndex(uint32_t paramId);
+
     /* -- presets ----------------------------------------------------- */
     bool implementsPresetLoad() const noexcept override { return true; }
     bool presetLoadFromLocation(uint32_t location_kind,
@@ -115,9 +118,12 @@ private:
     void setParamValue(int paramid, double value);
     uint32_t m_guiSize[2];
 
-private:
-    choc::ui::DesktopWindow *m_window;
+private: // gui
     choc::ui::WebView *m_webview; // null unless InitWebview
+    using Resource = choc::ui::WebView::Options::Resource;
+    using Path = choc::ui::WebView::Options::Path;
+    std::optional<Resource> GetResource(Path const &);
+    choc::ui::WebView::Options m_webviewOptions;
 
 private:
     fluid_settings_t *m_settings;
@@ -127,6 +133,7 @@ private:
     std::filesystem::path m_pluginPath;
     std::vector<std::filesystem::path> m_pluginPresetDirs;
     std::filesystem::path m_sfontPath;
+    mutable std::map<uint32_t, double> m_paramValues; // initialized during paramsInfo
 
     enum paramId
     {
