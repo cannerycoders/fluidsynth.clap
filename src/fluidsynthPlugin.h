@@ -96,7 +96,7 @@ public:
     bool stateLoad(const clap_istream *stream) noexcept override; 
 
     /* -- gui ------------------------------------------------------- */
-    virtual bool implementsGui() const noexcept override { return true; }
+    virtual bool implementsGui() const noexcept override { return false; }
     virtual bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
     virtual bool guiGetPreferredApi(const char **api, bool *is_floating) noexcept override;
     virtual bool guiCreate(const char *api, bool isFloating) noexcept override; 

@@ -568,6 +568,8 @@ FluidsynthPlugin::guiCreate(const char *api, bool isFloating) noexcept
 void
 FluidsynthPlugin::updateVoices()
 {
+    if(!m_webview) return; // not in gui mode
+
     std::stringstream sstr;
     fluid_sfont_t* sfont = fluid_synth_get_sfont_by_id(m_synth, m_fontId);
     fluid_sfont_iteration_start(sfont);

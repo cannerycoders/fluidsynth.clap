@@ -4,17 +4,17 @@
  * subdirectory structure.
  * 
  *  Windows, Linux:
- *     fluidsynth.clap/  <-- a directory
- *          fluidsynth.clap <--- the real clap plugin
+ *     FluidSynth.clap/  <-- a directory
+ *          FluidSynth.clap <--- the real clap plugin
  *          libfluidsynth-3.dll <-- the real fluidsynth
  *          libglib-2.0-0.dll <-- example of libfluidsynth-3 dependency
  *          ....
  *          README.md, LICENSE, etc
  *  MacOS:
- *     fluidsynth.clap/  <-- a directory/bundle
+ *     FluidSynth.clap/  <-- a directory/bundle
  *          Contents/
  *          MacOS/
- *              fluidsynth.clap <-- the real clap plugin
+ *              FluidSynth.dylib <-- the real clap plugin
  *          PkgInfo
  *          Resources/
  *             clap.icns
@@ -167,7 +167,7 @@ case "darwin":
         let resourcesDir = "Contents/Resources";
         let tcpy = m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
-            installext: ".clap", // <--------- need separate rule for other files
+            installext: "", // <--------- need separate rule for other files
             installdir: binDir,
         });
         /* no frameworks atm, statically linked 
