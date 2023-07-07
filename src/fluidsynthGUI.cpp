@@ -52,8 +52,10 @@ FluidsynthPlugin::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 {
     if(m_verbosity)
         _host.log(CLAP_LOG_INFO, "fluidsynth: guiGetSize");
-    *width = 512;
-    *height = 600;
+    m_guiSize[0] = 512;
+    m_guiSize[1] = 495;
+    *width = m_guiSize[0];
+    *height = m_guiSize[1];
     return true;
 }
 
@@ -149,7 +151,17 @@ static char const *s_index = R"(
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <style>
 html {
-    background-color: #111;
+    --scrollbarSize: 11px;
+    --thumbBgdColor: rgb(67, 78, 83);
+    --scrollbarBgdColor: #080808;
+    --thumbDragColor: rgb(55, 85, 140);
+    --titleColor: #6060A0;
+    --voicelistBgd: #050505; 
+    --activeBgd: #111d55;
+    --hoverBgd: #151515;
+    --headingColor: #40913f;
+    --linkColor: #8080FF;
+    --linkWeight: normal;
 }
 body {
     background-color: #111;
@@ -162,11 +174,46 @@ body {
     margin: 0px;
     box-sizing: border-box;
     padding: 10px;
+    scrollbar-width: thin; /* firefox */
+    scrollbar-color: var(--thumbBgdColor) var(--scrollbarBgdColor);
+}
+::-webkit-scrollbar {
+    width: var(--scrollbarSize);
+    height: var(--scrollbarSize)
+}
+::-webkit-scrollbar-track {
+    background: var(--scrollbarBgdColor);
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--thumbBgdColor);
+    border-radius: 8px;
+    border: 3px solid var(--scrollbarBgdColor);
+}
+::-webkit-scrollbar-corner {
+    background: rgba(0,0,0,0);
 }
 input {
     color: #ccc;
     background-color: #222;
     border-width: thin;
+}
+h3,h4 {
+    font-size: 1.5em;
+    margin-block-start: 10px;
+    margin-block-end: 10px;
+    color: var(--headingColor);
+}
+h3 > a {
+    font-size: .7em;
+    color: var(--linkColor);
+    font-weight: var(--linkWeight); 
+}
+td,th {
+    text-align: left;
+    font-weight: normal;
+}
+tr {
+    border: 2px solid black;
 }
 #filepath {
     width: 100%;
@@ -180,22 +227,20 @@ input {
     padding: 10px;
     margin-bottom: 10px;
 }
-.Group > div {
+.Group div,
+.Group > table {
     margin-bottom: 5px;
+    padding-left: 5px;
 }
-h3,h4 {
-    color: #8080a0;
+.Group table {
+    width: 100%;
 }
-td,th {
-    text-align: left;
-}
-h3 > a {
-    font-size: .8em;
-    color: #8080FF;
+col.c1, col.c2 {
+    width: 3em;
 }
 .Title {
     font-size: 1.15em;
-    color: #606090;
+    color: var(--titleColor); 
 }
 .Label {
     display: inline-block;
@@ -205,15 +250,27 @@ h3 > a {
 }
 #voicelist {
     overflow-y: auto;
-    height: 15em;
-    padding-left: 10px;
-    padding-right: 10px;
+    height: 11em;
+    background-color: var(--voicelistBgd);
+}
+#voicelist tr:hover {
+    background-color: var(--hoverBgd); 
+}
+#voicelist tr.active:hover,
+#voicelist tr.active {
+    background-color: var(--activeBgd);
+}
+#voicelist td {
+    cursor: pointer;
+}
+:focus {
+    outline: 1px dashed var(--titleColor);
 }
 </style>
 <body >
     <H3>FluidSynth.clap  
-        <a href="https://github.com/cannerycoders/fluidsynth.clap">github</a> |
-        <a href="http://fluidsynth.org">fluidsynth.org</a>
+        <a href="https://github.com/cannerycoders/fluidsynth.clap" target="_blank">github</a> |
+        <a href="http://fluidsynth.org" target="_blank">fluidsynth.org</a>
     </H3>
     <div class="Group">
         <!-- just want a file-pathname widget, no drop-zone etc -->
@@ -223,13 +280,13 @@ h3 > a {
     <div class="Group">
         <div class="Title">Parameters</div>
         <div><div class="Label">Gain</div><input id="gain" type="number" value="1" min="0" max="8" step=".1"></div>
-        <div><div class="Label">Program 0</div><input id="prog0" type="number" value="0" min="0" max="127"></div>
-        <div><div class="Label">Bank 0</div><input id="bank0" type="number" value="0" min="0" max="127"></div>
-    </div>
-    <div class="Group">
-        <div class="Title">Programs</div>
-        <div id="voicelist">
-        </div>
+        <div><div class="Label">Voice, Bank, Prog</div><span id="voicename"></span> <span id="bank">0</span>, <span id="prog">0</span></div>
+        <div class="Title">Voices</div>
+        <table>
+            <colgroup><col class="c1"><col class="c2"></colgroup>
+            <tr><th>Bank</th><th>Prog</th><th>Name</th></tr>
+        </table>
+        <div id="voicelist"></div>
     </div>
 
 <!------------------------------------------------------------------>
@@ -270,7 +327,6 @@ function initBindings()
     {
         el.onchange = (evt) =>
         {
-            // executes in host's mainthread
             tellHost("setparam", evt.target.id, event.target.value);
         };
     }
@@ -292,21 +348,51 @@ function updateAppData(key)
 };
 function updateVoices(json)
 {
-    tellHost("dbg", "updateVoices");
-    let el = document.querySelector("#voicelist");
+    let bank = document.querySelector("#bank");
+    let prog = document.querySelector("#prog");
+    let voicename = document.querySelector("#voicename");
+    let tabEl = document.querySelector("#voicelist");
     try
     {
         let o = JSON.parse(json);
         let html = [];
-        html.push("<table id-'voicetable'>");
-        html.push("<tr><th>Bank</th><th>Prog</th><th>Name</th></tr>");
+        html.push("<table>");
+        html.push("<colgroup><col class='c1'><col class='c2'></colgroup>");
+        let i = 0;
         for(let p of o) // an array of obj, last is {}
         {
             if(!p.nm) break;
-            html.push(`<tr><td>${p.b}</td><td>${p.p}</td><td>${p.nm}</td></tr>\n`);
+            html.push(`<tr tabindex='0' id='r${i++}'><td>${p.b}</td><td>${p.p}</td><td>${p.nm}</td></tr>\n`);
         }
         html.push("</table>");
-        el.innerHTML = html.join("");
+        tabEl.innerHTML = html.join("");
+
+        function changeVoice(evt)
+        {
+            let i = parseInt(evt.currentTarget.id.slice(1));
+            let oldActive = tabEl.querySelector(".active");
+            if(oldActive) oldActive.classList.toggle("active");
+            evt.currentTarget.classList.toggle("active");
+
+            let oi = o[i];
+            prog.innerText = oi.p;
+            bank.innerText = oi.b;
+            voicename.innerText = oi.nm;
+            tellHost("setparam", "prog0", `${oi.p}`); // value must be string
+            tellHost("setparam", "bank0", `${oi.b}`); 
+        }
+        for(let row of tabEl.querySelectorAll("tr"))
+        {
+            row.onfocus = (evt) =>
+            {
+                changeVoice(evt);
+            }
+            row.onclick = (evt) =>
+            {
+                evt.currentTarget.focus();
+                // changeVoice(evt);
+            };
+        }
     }
     catch(err)
     {
@@ -314,6 +400,8 @@ function updateVoices(json)
     }
 }
 document.addEventListener("DOMContentLoaded", initBindings);
+// we rely on focus and tab, shift-tab to select voices
+// document.onkeydown = (evt) => { tellHost("log", `keycode: ${evt.keyCode}`); };
 tellHost("dbg", "script loaded");
 </script>
 
@@ -324,8 +412,6 @@ tellHost("dbg", "script loaded");
 bool
 FluidsynthPlugin::guiCreate(const char *api, bool isFloating) noexcept 
 {
-    m_guiSize[0] = 512;
-    m_guiSize[1] = 512;
     using Resource = choc::ui::WebView::Options::Resource;
     using Path = choc::ui::WebView::Options::Path;
     m_webviewOptions.fetchResource = [this](Path const  &path) -> std::optional<Resource>
