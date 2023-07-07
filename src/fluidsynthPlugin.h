@@ -121,7 +121,8 @@ private:
     std::string m_voices; // JSON string
 
 private: // gui
-    choc::ui::WebView *m_webview; // null unless InitWebview
+    choc::ui::WebView *m_webview = nullptr; // null unless InitWebview
+    choc::ui::DesktopWindow *m_window = nullptr;
     using Resource = choc::ui::WebView::Options::Resource;
     using Path = choc::ui::WebView::Options::Path;
     std::optional<Resource> GetResource(Path const &);

@@ -3,24 +3,33 @@
 #include <clap/helpers/host-proxy.hxx>
 #include <iostream>
 
+#define AS_TRANSIENT 0
+
 bool 
 FluidsynthPlugin::guiIsApiSupported(const char *api, bool isFloating) noexcept 
 {
-    if(isFloating)
-        return false;
-    else
-        return true;
+#if AS_TRANSIENT
+    return isFloating;  // can't figure out embedding so create our own window
+#else
+    return !isFloating; // prefer embedding
+#endif 
 }
 
 bool
 FluidsynthPlugin::guiGetPreferredApi(const char **api, bool *is_floating) noexcept 
 {
+#if AS_TRANSIENT
+    *is_floating = true;
+    return true;
+#else
     return false; // no preferred API atm
+#endif
 }
 
 void
 FluidsynthPlugin::guiDestroy() noexcept 
 {
+    _host.log(CLAP_LOG_INFO, "fluidsynth: implement guiDestroy");
     // m_window->setVisible(false);
     // xxx: delete m_window;
 }
@@ -37,15 +46,26 @@ FluidsynthPlugin::guiShow() noexcept
 {
     if(m_verbosity)
         _host.log(CLAP_LOG_INFO, "fluidsynth: guiShow");
-    // m_window->setVisible(false);
-    return false;
+    if(m_window)
+    {
+        m_window->setVisible(true);
+        return true;
+    }
+    else
+        return false;
 }
 bool
 FluidsynthPlugin::guiHide() noexcept 
 {
     if(m_verbosity)
         _host.log(CLAP_LOG_INFO, "fluidsynth: guiHide");
-    return false;
+    if(m_window)
+    {
+        m_window->setVisible(false);
+        return true;
+    }
+    else
+        return false;
 }
 bool
 FluidsynthPlugin::guiGetSize(uint32_t *width, uint32_t *height) noexcept 
@@ -62,7 +82,7 @@ FluidsynthPlugin::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 bool
 FluidsynthPlugin::guiCanResize() const noexcept 
 {
-    return true;
+    return false;
 }
 
 bool
@@ -80,7 +100,7 @@ FluidsynthPlugin::guiAdjustSize(uint32_t *width, uint32_t *height) noexcept
     if(m_verbosity)
     {
         char buf[128];
-        sprintf(buf, "fluidsynth: adjustSize %d %d -> %d %d", 
+        snprintf(buf, sizeof(buf), "fluidsynth: adjustSize %d %d -> %d %d", 
                 *width, *height, m_guiSize[0], m_guiSize[1]);
         _host.log(CLAP_LOG_INFO, buf);
     }
@@ -93,7 +113,7 @@ bool
 FluidsynthPlugin::guiSetSize(uint32_t width, uint32_t height) noexcept 
 {
     char buf[128];
-    sprintf(buf, "fluidsynth: setSize %d %d", width, height);
+    snprintf(buf, sizeof(buf), "fluidsynth: setSize %d %d", width, height);
     _host.log(CLAP_LOG_INFO, buf);
     m_guiSize[0] = width;
     m_guiSize[1] = height;
@@ -107,18 +127,20 @@ FluidsynthPlugin::guiSetSize(uint32_t width, uint32_t height) noexcept
 void
 FluidsynthPlugin::guiSuggestTitle(const char *title) noexcept 
 {
-    _host.log(CLAP_LOG_INFO, "fluidsynth: guiSuggestTitle");
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "fluidsynth transient title: %s", title);
+    _host.log(CLAP_LOG_INFO, buf);
 }
 
 /**
- * install our webview into host-provided window
+ * install our webview into host-provided window, only happens in non-transient mode.
  */
 bool
 FluidsynthPlugin::guiSetParent(const clap_window *window) noexcept 
 {
     bool handled = true;
-    void *viewHandle = m_webview->getViewHandle();
 #ifdef _WIN32
+    void *viewHandle = m_webview->getViewHandle();
     RECT r;
     HWND hwnd = (HWND) window->win32;
     HWND newchild = (HWND) viewHandle;
@@ -130,6 +152,19 @@ FluidsynthPlugin::guiSetParent(const clap_window *window) noexcept
     SetWindowPos(newchild, nullptr, r.left, r.top, r.right-r.left, r.bottom-r.top,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE | SWP_FRAMECHANGED);
     ShowWindow(newchild, SW_SHOW); // we're visible independent of our parent
+#elif defined(__APPLE__)
+    #if AS_TRANSIENT
+        assert(!"this shouldn't happen since we're operating in transient mode."); 
+        // see bottom of guiCreate
+    #else
+    {
+        // crashes, something to do with delegation? (ie: non-transient is WIP)
+        void *viewHandle = m_webview->getViewHandle();
+        id windowid = (id) window->cocoa;
+        choc::objc::AutoReleasePool autoreleasePool;
+        choc::objc::call<void>(windowid, "setContentView:", (id) viewHandle);
+    }
+    #endif
 #else
     #error "unimplemented platform"
     handled = false;
@@ -140,8 +175,12 @@ FluidsynthPlugin::guiSetParent(const clap_window *window) noexcept
 bool
 FluidsynthPlugin::guiSetTransient(const clap_window *window) noexcept 
 {
-    //_host.log(CLAP_LOG_INFO, "fluidsynth: guiSetTransient");
+#ifdef _WIN32_
     return false;
+#else
+    _host.log(CLAP_LOG_INFO, "fluidsynth: guiSetTransient");
+    return true;
+#endif
 }
 
 static char const *s_index = R"(
@@ -511,6 +550,18 @@ FluidsynthPlugin::guiCreate(const char *api, bool isFloating) noexcept
                 return choc::value::createString("");
         }
     );
+    #if AS_TRANSIENT
+    {
+        m_window = new choc::ui::DesktopWindow({100, 100, 512, 510});
+        // since we're installing a webview (both choc-aware), we needn't
+        // trigger the creation of default content.
+        m_window->windowClosed = [this]
+        {
+            _host.log(CLAP_LOG_INFO, "window-closed");
+        };
+        m_window->setContent(m_webview->getViewHandle());
+    }
+    #endif
     return true;
 }
 
@@ -552,7 +603,7 @@ FluidsynthPlugin::GetResource(choc::ui::WebView::Options::Path const &path)
         if(path != "/favicon.ico")
         {
             char buf[1024];
-            sprintf(buf, "fluidsynth.getrez %s", path.c_str());
+            snprintf(buf, sizeof(buf), "fluidsynth.getrez unhandled %s", path.c_str());
             _host.log(CLAP_LOG_INFO, buf);
         }
         return std::nullopt;

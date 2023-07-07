@@ -29,11 +29,12 @@ clap_plugin_descriptor_t const FluidsynthPlugin::s_descriptor =
 FluidsynthPlugin::FluidsynthPlugin(
     char const *pluginPath, clap_host const *host) :
         Plugin(&s_descriptor, host),
+        m_webview(nullptr),
+        m_window(nullptr),
         m_settings(nullptr),
         m_synth(nullptr),
         m_fontId(-1),
-        m_pluginPath(pluginPath),
-        m_webview(nullptr)
+        m_pluginPath(pluginPath)
 {
     #ifdef _WIN32
     char const *appdata = getenv("LOCALAPPDATA");
@@ -81,6 +82,8 @@ FluidsynthPlugin::~FluidsynthPlugin()
     }
     if(m_webview)
         delete m_webview;
+    if(m_window)
+        delete m_window;
 }
 
 /* clap plugin -------------------------------------------------------------- */
