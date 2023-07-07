@@ -5,6 +5,8 @@
 - [presets, soundfonts](#presets-soundfonts)
 - [state save/restore](#state-saverestore)
 - [parameters](#parameters)
+- [known issues](#known-issues)
+- [release history](#release-history)
 - [see also](#see-also)
 - [devinstall](#devinstall)
   - [win32](#win32)
@@ -108,6 +110,21 @@ Here are the exposed/supported fluidsynth parameters and their ids.
 | 48-63    | bank associated with midi chans 0-15    | 0-127       | 0       |
 
 More details on these settings can be found [in the fluidsynth docs](https://www.fluidsynth.org/api/settings_synth.html).
+
+## known issues
+
+[clap-host](https://github.com/free-audio/clap-host) has problems loading 
+FluidSynth.clap in various CLI configurations (eg windows+git-bash). It
+seems to work when your CWD is  `...CLAP/FluidSynth.clap` and launched
+with clap-host -p ./FluidSynth.clap.
+
+Default gain is 0.2.  For simple tests is easily mistaken for silence.
+
+## release history
+
+0.1.0 - windows only (didn't work with clap-host)
+0.2.0 - three platforms (still buggy for clap-host)
+0.3.0 - simple GUI, works with clap-host
 
 ## see also
 

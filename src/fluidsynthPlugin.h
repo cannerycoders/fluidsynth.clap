@@ -117,6 +117,8 @@ private:
     void processEvent(const clap_event_header_t *hdr);
     void setParamValue(int paramid, double value);
     uint32_t m_guiSize[2];
+    void updateVoices();
+    std::string m_voices; // JSON string
 
 private: // gui
     choc::ui::WebView *m_webview; // null unless InitWebview

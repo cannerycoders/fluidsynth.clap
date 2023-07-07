@@ -31,6 +31,7 @@ FluidsynthPlugin::FluidsynthPlugin(
         Plugin(&s_descriptor, host),
         m_settings(nullptr),
         m_synth(nullptr),
+        m_fontId(-1),
         m_pluginPath(pluginPath),
         m_webview(nullptr)
 {
@@ -117,6 +118,8 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
                         1/*reset*/);
         if(m_verbosity > 0)
             std::cerr << "fluid font " << m_sfontPath << " id:" << m_fontId << "\n";
+        this->setParamValue(k_Gain, 1.0);
+        this->updateVoices();
     }
 
     if(m_verbosity > 0)
@@ -362,7 +365,7 @@ FluidsynthPlugin::s_fluidParams[] =
         nullptr, 
         "gain",
         "",
-        0., 10., .2,
+        0., 10., 1.,
     },
 
     /* reverb -------------------------- */
@@ -753,9 +756,14 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
 {
     if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE)
     {
+        char buf[2048];
         std::filesystem::path fp(location);
         std::string tmp;
-        if(!std::filesystem::exists(fp) && fp.is_relative())
+        bool found = false;
+        if(std::filesystem::exists(fp))
+            found = true; 
+        else
+        if(fp.is_relative())
         {
             // try our default locations 
             for(auto x : m_pluginPresetDirs)
@@ -765,27 +773,30 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
                 {
                     tmp = nfp.generic_string();
                     location = tmp.c_str();
+                    found = true;
                     break;
                 }
             }
         }
-        int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
-        if(id == FLUID_FAILED)
+        if(found)
         {
-            std::cerr << "fluidsynth can't load " << location << "\n";
-            return false;
-        }
-        else
-        {
-            if(m_verbosity)
-                std::cerr << "fluidsynth loaded " << location << "\n";
-            m_sfontPath = location;
-            m_fontId = id;
-            return true;
-        }
+            int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
+            if(id != FLUID_FAILED)
+            {
+                snprintf(buf, sizeof(buf), "fluidsynth loaded %s", location);
+                _host.log(CLAP_LOG_INFO, buf);
+                m_sfontPath = location;
+                if(m_fontId != -1)
+                    fluid_synth_sfunload(m_synth, m_fontId, 1);
+                m_fontId = id;
+                this->updateVoices();
+                return true;
+            }
+        } // fallthrough on error
+        snprintf(buf, sizeof(buf), "fluidsynth ERROR can't load %s", location);
+        _host.log(CLAP_LOG_INFO, buf);
     }
-    else
-        return false;
+    return false;
 }
 
 #define ckIOError(x)  if(x == -1) return false
@@ -860,13 +871,18 @@ FluidsynthPlugin::stateLoad(const clap_istream *stream) noexcept
 
     char const *location = sfpath.c_str();
     int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
-    if(id == FLUID_FAILED)
+    if(id == FLUID_OK)
+    {
+        if(m_fontId != -1)
+            fluid_synth_sfunload(m_synth, m_fontId, 1);
+        m_fontId = id;
+        this->updateVoices();
+    }
+    else
     {
         std::cerr << "fluidsynth can't load " << location << "\n";
         return false;
     }
-    else
-        m_fontId = id;
     ckIOError(stream->read(stream, (char *) &gain, sizeof(gain)));
     m_gain = gain;
     ckIOError(stream->read(stream, buf, 1)); // newline
