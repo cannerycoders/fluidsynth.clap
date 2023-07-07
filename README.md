@@ -195,7 +195,7 @@ external DLL dependencies.
 This requires that you install [homebrew](https://brew.sh).
 
 ```sh
-brew install fluidsynth`
+brew install fluidsynth
 ```
 
 ## implementation notes
