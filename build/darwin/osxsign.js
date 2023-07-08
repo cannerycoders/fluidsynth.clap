@@ -1,4 +1,6 @@
 //
+// this script is run on macos by jsmk package
+// 
 // https://developer.apple.com/forums/thread/130855
 // just iterate over all the files in the package
 //  -- only sign binaries
@@ -7,7 +9,7 @@
 //
 // codesign --sign magic --force --timestamp \
 //    --options runtime 
-//    --entitlements ../build/entitlements.plist 
+//    --entitlements $thisdir/entitlements.plist 
 //    file
 
 let fs = require("fs"); // require("fs/promises");
@@ -26,13 +28,15 @@ if(process.argv.length != 3)
 }
 let projRoot = process.argv[2];
 let arglist = [
-    "--force", "-s", devId, "--deep", "--strict", "--options=runtime", "--timestamp",
+    "codesign", "--force", "-s", devId, "--deep", "--strict", "--options=runtime", "--timestamp",
+    "--entitlements", "build/darwin/entitlements.plist",
     projRoot,
 ];
 
 try
 {
-    let stdout = execFileSync("codesign", arglist).toString().trim();
+    console.log(`codesign -s XXX ${arglist.slice(4).join(" ")}`);
+    let stdout = execFileSync(arglist[0], arglist.slice(1)).toString().trim();
     if(stdout.length)
         console.log(`INFO codesign:\n${stdout}`);
 }
