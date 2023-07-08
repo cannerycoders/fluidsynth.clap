@@ -21,7 +21,7 @@ clap_plugin_descriptor_t const FluidsynthPlugin::s_descriptor =
    "https://fluidsynth.org",
    "https://fluidsynth.org/documentation",
    "https://fluidsynth.org",
-   "2.3.2",
+   "2.3.3",
    "FluidSynth CLAP plugin.",
    s_features, 
 };
@@ -108,6 +108,7 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
             fluid_settings_setint(m_settings, "synth.verbose", 1);
         }
         m_synth = new_fluid_synth(m_settings);
+        fluid_synth_set_gain(m_synth, (float) s_fluidParams[0].default_value);
         m_fontId = fluid_synth_sfload(m_synth, 
                         m_sfontPath.generic_string().c_str(), 
                         1/*reset*/);
@@ -358,7 +359,7 @@ FluidsynthPlugin::s_fluidParams[] =
         nullptr, 
         "gain",
         "",
-        0., 10., .2,
+        0., 10., 1.,
     },
 
     /* reverb -------------------------- */
@@ -488,10 +489,11 @@ FluidsynthPlugin::paramsCount() const noexcept
 bool 
 FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
 {
+    bool found = false;
     if(paramIndex < k_indexedParamCount)
     {
         *info = s_fluidParams[paramIndex];
-        return true;
+        found = true;
     }
     else
     {
@@ -510,8 +512,12 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
             info->id += chan;
             snprintf(info->name, sizeof(info->name), "bank%d", chan);
         }
-        return true;
+        found = true;
     }
+
+    if(found)
+        m_paramValues[info->id] = info->default_value;
+    return found;
 } 
 
 /// The host can at any time read parameters' value on the [main-thread] using
@@ -525,98 +531,19 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
 bool 
 FluidsynthPlugin::paramsValue(clap_id paramid, double *value) noexcept
 {
-    if(paramid == k_Gain)
-        *value = m_gain;
-    else
-    if(paramid <= k_RevLevel)
-    {
-        switch(paramid)
-        {
-        case k_Reverb: // on-off
-            *value = 1; // fluid_synth_get_reverb_on(m_synth);
-            break; 
-        case k_RevRoomsize: // 0-1.2
-            fluid_synth_get_reverb_group_roomsize(m_synth, -1, value);
-            break; 
-        case k_RevDamping:  // 0-1
-            fluid_synth_get_reverb_group_damp(m_synth, -1, value);
-            break; 
-        case k_RevWidth:    // 0-100
-            fluid_synth_get_reverb_group_width(m_synth, -1, value);
-            break; 
-        case k_RevLevel:
-            fluid_synth_get_reverb_group_level(m_synth, 1, value);
-            break;
-        default:
-            assert(0);
-        }
-    }
-    else
-    if(paramid <= k_ChorusMod)
-    {
-        switch(paramid)
-        {
-        case k_Chorus: // on-off
-            *value = 1; // fluid_synth_get_reverb_on(m_synth);
-            break;
-        case k_ChorusNR: // 0-99, voice-count
-            {
-                int nr;
-                fluid_synth_get_chorus_group_nr(m_synth, -1, &nr);
-                *value = nr;
-            }
-            break;
-        case k_ChorusLevel: // 0-1
-            fluid_synth_get_chorus_group_level(m_synth, -1, value);
-            break;
-        case k_ChorusSpeed: // Hz (.29 - 5)
-            fluid_synth_get_chorus_group_speed(m_synth, -1, value);
-            break;
-        case k_ChorusDepth: // ms (0 - 21)
-            fluid_synth_get_chorus_group_depth(m_synth, -1, value);
-            break;
-        case k_ChorusMod:  // sine or triangle
-            {
-                int i;
-                fluid_synth_get_chorus_group_type(m_synth, -1, &i);
-                *value = i;
-            }
-            break;
-        default:
-            assert(0);
-        }
-    }
-    else
-    {
-        if(m_synth)
-        {
-            int chan;
-            if(paramid >= k_Bank0)
-                chan = paramid - k_Bank0;
-            else
-                chan = paramid - k_Prog0;
-            
-            int fontId, bank, prog;
-            fluid_synth_get_program(m_synth, chan, &fontId, &bank, &prog);
-            if(paramid >= k_Bank0)
-                *value = bank;
-            else
-                *value = prog;
-        }
-        else
-            *value = 0;
-    }
+    *value = m_paramValues[paramid];
     return true;
 }
 
 void
 FluidsynthPlugin::setParamValue(int paramid, double value)
 {
+    m_paramValues[paramid] = value;
+    if(!m_synth) return;
+
     if(paramid == k_Gain)
     {
-        m_gain = (float) value;
-        if(m_synth)
-            fluid_synth_set_gain(m_synth, m_gain);
+        fluid_synth_set_gain(m_synth, (float) value);
     }
     else
     if(paramid <= k_RevLevel)
