@@ -90,7 +90,7 @@ let defs = {
     CLAP_NO_YAS: null
 };
 
-let t1 = m.NewTask("compile", "cpp->o", 
+let t1 = m.NewTask("compile", "cpp->o",
 {
     inputs: Project.Glob("src/*.cpp"),
     defs,
@@ -123,6 +123,7 @@ switch(platform)
 case "linux":
 case "win32":
     {
+        let ts = jsmk.GetActiveToolset().GetHandle();
         let dsoGlob = (platform == "linux") ? "lib/*so*" : "bin/*.dll";
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
@@ -140,7 +141,7 @@ case "win32":
             installdir: "etc",
         });
         /* finally, we zip ------------------------------- */
-        let zipfile = `${appName}.zip`;
+        let zipfile = `${appName}.${ts}.zip`;
         m.NewTask("fluidsynthPackage", "packagescript", {
             ARGUMENTS: ["build/zipdir.js", installRoot,
                 jsmk.path.join(installRoot, "..", zipfile)]
