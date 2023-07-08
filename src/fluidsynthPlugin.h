@@ -8,7 +8,6 @@
 
 #include <choc/platform/choc_Platform.h>
 #include <choc/platform/choc_Assert.h>
-#include <choc/gui/choc_DesktopWindow.h>
 #include <choc/gui/choc_WebView.h>
 
 #include <string>
@@ -96,7 +95,7 @@ public:
     bool stateLoad(const clap_istream *stream) noexcept override; 
 
     /* -- gui ------------------------------------------------------- */
-    virtual bool implementsGui() const noexcept override { return false; }
+    virtual bool implementsGui() const noexcept override { return true; }
     virtual bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
     virtual bool guiGetPreferredApi(const char **api, bool *is_floating) noexcept override;
     virtual bool guiCreate(const char *api, bool isFloating) noexcept override; 
@@ -119,10 +118,11 @@ private:
     uint32_t m_guiSize[2];
     void updateVoices();
     std::string m_voices; // JSON string
+    bool guiSetVisible(bool);
 
 private: // gui
+    bool m_webviewReady = false;
     choc::ui::WebView *m_webview = nullptr; // null unless InitWebview
-    choc::ui::DesktopWindow *m_window = nullptr;
     using Resource = choc::ui::WebView::Options::Resource;
     using Path = choc::ui::WebView::Options::Path;
     std::optional<Resource> GetResource(Path const &);

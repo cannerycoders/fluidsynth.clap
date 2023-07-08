@@ -3,16 +3,10 @@
 #include <clap/helpers/host-proxy.hxx>
 #include <iostream>
 
-#define AS_TRANSIENT 0
-
 bool 
 FluidsynthPlugin::guiIsApiSupported(const char *api, bool isFloating) noexcept 
 {
-#if AS_TRANSIENT
-    return isFloating;  // can't figure out embedding so create our own window
-#else
     return !isFloating; // prefer embedding
-#endif 
 }
 
 bool
@@ -30,8 +24,6 @@ void
 FluidsynthPlugin::guiDestroy() noexcept 
 {
     _host.log(CLAP_LOG_INFO, "fluidsynth: implement guiDestroy");
-    // m_window->setVisible(false);
-    // xxx: delete m_window;
 }
 
 bool
@@ -44,29 +36,31 @@ FluidsynthPlugin::guiSetScale(double scale) noexcept
 bool
 FluidsynthPlugin::guiShow() noexcept 
 {
-    if(m_verbosity)
-        _host.log(CLAP_LOG_INFO, "fluidsynth: guiShow");
-    if(m_window)
-    {
-        m_window->setVisible(true);
-        return true;
-    }
-    else
-        return false;
+    return this->guiSetVisible(true);
 }
+
 bool
 FluidsynthPlugin::guiHide() noexcept 
 {
-    if(m_verbosity)
-        _host.log(CLAP_LOG_INFO, "fluidsynth: guiHide");
-    if(m_window)
-    {
-        m_window->setVisible(false);
-        return true;
-    }
-    else
-        return false;
+    return this->guiSetVisible(false);
 }
+
+bool
+FluidsynthPlugin::guiSetVisible(bool vis) // not part of the clap interface.
+{
+    if(m_verbosity)
+    {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "fluidsynth vis: %d", vis);
+        _host.log(CLAP_LOG_INFO, buf);
+    }
+    #ifdef __APPLE__
+    id webview = (id) m_webview->getViewHandle();
+    choc::objc::call<void>(webview, "setHidden:", (BOOL) !vis);
+    #endif
+    return true;
+}
+
 bool
 FluidsynthPlugin::guiGetSize(uint32_t *width, uint32_t *height) noexcept 
 {
@@ -158,11 +152,23 @@ FluidsynthPlugin::guiSetParent(const clap_window *window) noexcept
         // see bottom of guiCreate
     #else
     {
-        // crashes, something to do with delegation? (ie: non-transient is WIP)
-        void *viewHandle = m_webview->getViewHandle();
-        id windowid = (id) window->cocoa;
+        // windowid from clap-host is-a QNSView (not a NSWindow subclass)
+        #if defined (__LP64__) && __LP64__
+        using CGFloat = double;
+        #else
+        using CGFloat = float;
+        #endif
+        struct CGPoint { CGFloat x = 0, y = 0; };
+        struct CGSize  { CGFloat width = 0, height = 0; };
+        struct CGRect  { CGPoint origin; CGSize size; };
+
+        id viewid = (id) window->cocoa;
+        id subviewid = (id) m_webview->getViewHandle();
         choc::objc::AutoReleasePool autoreleasePool;
-        choc::objc::call<void>(windowid, "setContentView:", (id) viewHandle);
+        CGSize sz; sz.width = 512; sz.height = 512;
+        choc::objc::call<void>(subviewid, "setFrameSize:", sz);
+        choc::objc::call<void>(viewid, "addSubview:", subviewid);
+        choc::objc::call<void>(subviewid, "setHidden:", (BOOL) false);
     }
     #endif
 #else
@@ -369,7 +375,7 @@ function initBindings()
             tellHost("setparam", evt.target.id, event.target.value);
         };
     }
-    tellHost("dbg", "bindings installed");
+    tellHost("status", "ready");
 };
 function updateAppData(key)
 {
@@ -453,12 +459,13 @@ FluidsynthPlugin::guiCreate(const char *api, bool isFloating) noexcept
 {
     using Resource = choc::ui::WebView::Options::Resource;
     using Path = choc::ui::WebView::Options::Path;
+    m_webviewOptions.enableDebugMode = true;
     m_webviewOptions.fetchResource = [this](Path const  &path) -> std::optional<Resource>
     {
         return this->GetResource(path);
     };
     m_webview = new choc::ui::WebView(m_webviewOptions);
-    m_webview->bind("tellHost", 
+    m_webview->bind("tellHost",
         [this](const choc::value::ValueView& args) -> choc::value::Value
         {
             std::string_view arg0 = args[0].getString();
@@ -509,6 +516,13 @@ FluidsynthPlugin::guiCreate(const char *api, bool isFloating) noexcept
                 return choc::value::createInt32(0);
             }
             else
+            if(arg0 == "status") // delivered when index.html/js loads.
+            {
+                m_webviewReady = true;
+                this->updateVoices();
+                return choc::value::createInt32(0);
+            }
+            else
             if(arg0 == "dbg")
             {
                 if(m_verbosity)
@@ -549,26 +563,23 @@ FluidsynthPlugin::guiCreate(const char *api, bool isFloating) noexcept
             else
                 return choc::value::createString("");
         }
-    );
-    #if AS_TRANSIENT
-    {
-        m_window = new choc::ui::DesktopWindow({100, 100, 512, 510});
-        // since we're installing a webview (both choc-aware), we needn't
-        // trigger the creation of default content.
-        m_window->windowClosed = [this]
-        {
-            _host.log(CLAP_LOG_INFO, "window-closed");
-        };
-        m_window->setContent(m_webview->getViewHandle());
-    }
-    #endif
+    ); 
+    if(m_verbosity)
+        _host.log(CLAP_LOG_INFO, "fluidsynth webview created");
     return true;
 }
 
 void
 FluidsynthPlugin::updateVoices()
 {
-    if(!m_webview) return; // not in gui mode
+    if(m_verbosity)
+    {
+        if(m_webviewReady)
+            _host.log(CLAP_LOG_INFO, "fluidsynth updateVoices");
+        else
+            _host.log(CLAP_LOG_INFO, "fluidsynth IGNORE updateVoices");
+    }
+    if(!m_webviewReady) return; // not in gui mode or webviewInit issue
 
     std::stringstream sstr;
     fluid_sfont_t* sfont = fluid_synth_get_sfont_by_id(m_synth, m_fontId);
@@ -592,6 +603,13 @@ FluidsynthPlugin::updateVoices()
 std::optional<choc::ui::WebView::Options::Resource> 
 FluidsynthPlugin::GetResource(choc::ui::WebView::Options::Path const &path)
 {
+    if(m_verbosity)
+    {
+        char buf[2048];
+        snprintf(buf, sizeof(buf), "fluidsynth webview/getresource %s", path.c_str());
+        _host.log(CLAP_LOG_INFO, buf);
+    }
+
     if(path == "/" || path == "/index.html")
     {
         choc::ui::WebView::Options::Resource rez; // rez.data vector<unit8_t>

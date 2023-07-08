@@ -167,7 +167,7 @@ case "darwin":
         let resourcesDir = "Contents/Resources";
         let tcpy = m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
-            installext: "", // <--------- need separate rule for other files
+            installext: "", // <--- need separate rule for other files (ClapHost.dylib in Info.plist)
             installdir: binDir,
         });
         /* no frameworks atm, statically linked 

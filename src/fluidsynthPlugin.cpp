@@ -30,7 +30,6 @@ FluidsynthPlugin::FluidsynthPlugin(
     char const *pluginPath, clap_host const *host) :
         Plugin(&s_descriptor, host),
         m_webview(nullptr),
-        m_window(nullptr),
         m_settings(nullptr),
         m_synth(nullptr),
         m_fontId(-1),
@@ -64,8 +63,9 @@ FluidsynthPlugin::FluidsynthPlugin(
         if(std::filesystem::exists(m_sfontPath))
             break;
     }
-    if(getenv("FLUIDSYNTH_CLAP_DEBUG"))
-        m_verbosity = 2;
+    char const *debug = getenv("FLUIDSYNTH_CLAP_DEBUG");
+    if(debug)
+        m_verbosity = atoi(debug);
     else
         m_verbosity = 0;
 
@@ -82,8 +82,6 @@ FluidsynthPlugin::~FluidsynthPlugin()
     }
     if(m_webview)
         delete m_webview;
-    if(m_window)
-        delete m_window;
 }
 
 /* clap plugin -------------------------------------------------------------- */

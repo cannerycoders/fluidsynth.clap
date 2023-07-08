@@ -6,6 +6,7 @@
 - [state save/restore](#state-saverestore)
 - [parameters](#parameters)
 - [known issues](#known-issues)
+  - [gui issues](#gui-issues)
 - [release history](#release-history)
 - [see also](#see-also)
 - [devinstall](#devinstall)
@@ -121,13 +122,20 @@ FluidSynth.clap in various CLI configurations (eg windows+git-bash). It
 seems to work when your CWD is  `...CLAP/FluidSynth.clap` and launched
 with clap-host -p ./FluidSynth.clap.
 
-Default gain is 0.2.  For simple tests is easily mistaken for silence.
+### gui issues
+
+Currently the GUI is based on [choc's webview](https://github.com/tracktion/choc).
+This seems to work okay with clap-host on windows but not with other hosts that
+also includes a webview instance.  The same is true on MacOS but with the added
+complexity that the webview requires special entitlements that are defined by 
+the app (and beyond our control).
 
 ## release history
 
-0.1.0 - windows only (didn't work with clap-host)
-0.2.0 - three platforms (still buggy for clap-host)
-0.3.0 - simple GUI, works with clap-host
+* 0.1.0 - windows only (didn't work with clap-host)
+* 0.2.0 - three platforms (still buggy for clap-host)
+* 0.3.0 - experimental - simple GUI, works with clap-host 
+  (but see [known issues](#guiissues)).
 
 ## see also
 
