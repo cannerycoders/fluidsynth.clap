@@ -185,17 +185,20 @@ case "darwin":
             ]
         });
 
+        let ts = jsmk.GetActiveToolset().GetHandle();
+        let dmgExt = `.${ts}.dmg`;
         m.NewTask("osxdmg", "packagescript", 
         {
             ARGUMENTS: [
-                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", installRoot+".dmg"
+                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", 
+                installRoot+dmgExt
             ]
         });
         
         m.NewTask("osxnotarize", "repositscript",
         {
             ARGUMENTS: [
-                "build/darwin/osxnotarize.js", installRoot+".dmg"
+                "build/darwin/osxnotarize.js", installRoot+dmgExt
             ]
         });
     }
