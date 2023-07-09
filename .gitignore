@@ -4,6 +4,7 @@ _built/
 _prebuilt/
 _install/
 _package/
+_released/
 */_built/
 */_install/
 */_released/
