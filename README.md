@@ -7,6 +7,8 @@
 - [parameters](#parameters)
 - [release history](#release-history)
 - [known issues](#known-issues)
+  - [Using with clap-host example host:](#using-with-clap-host-example-host)
+  - [Windows](#windows)
 - [see also](#see-also)
 - [devinstall](#devinstall)
   - [win32](#win32)
@@ -119,11 +121,20 @@ More details on these settings can be found [in the fluidsynth docs](https://www
 
 ## known issues
 
-Using with clap-host example host:
+### Using with clap-host example host:
 
 * clap-host doesn't deliver/implement all the MIDI events esp: 
     * program change
     * pitch-wheel
+    * doesn't handle transitive dlls on windows
+
+### Windows
+
+* our plugin needs external dlls to access fluidsynth functions.
+  Some CLAP hosts handle this, others don't. Developers of Clap Hosts
+  should consider adding a call to `SetDllDirectory(..dir that contains dlls...)`.
+  Otherwise you might experiment with including this dir in your PATH or
+  even launching the host from within the FluidSynth.clap directory.
 
 ## see also
 
