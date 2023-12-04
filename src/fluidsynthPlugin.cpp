@@ -1,5 +1,13 @@
 #include "fluidsynthPlugin.h"
 
+#ifdef _WIN32
+#pragma warning(disable: 4267) // size_t warnings
+#endif
+#include "RSJparser.tcc"
+#ifdef _WIN32
+#pragma warning(default: 4267) // size_t warnings
+#endif
+
 #include <clap/helpers/plugin.hxx>
 #include <clap/helpers/host-proxy.hxx>
 
@@ -29,7 +37,6 @@ clap_plugin_descriptor_t const FluidsynthPlugin::s_descriptor =
 FluidsynthPlugin::FluidsynthPlugin(
     char const *pluginPath, clap_host const *host) :
         Plugin(&s_descriptor, host),
-        m_webview(nullptr),
         m_settings(nullptr),
         m_synth(nullptr),
         m_fontId(-1),
@@ -80,8 +87,6 @@ FluidsynthPlugin::~FluidsynthPlugin()
         delete_fluid_synth(m_synth);
         delete_fluid_settings(m_settings);
     }
-    if(m_webview)
-        delete m_webview;
 }
 
 /* clap plugin -------------------------------------------------------------- */
@@ -120,7 +125,8 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
         if(m_verbosity > 0)
             std::cerr << "fluid font " << m_sfontPath << " id:" << m_fontId << "\n";
         this->setParamValue(k_Gain, 1.0);
-        this->updateVoices();
+
+        // send an activate message ? 
     }
 
     if(m_verbosity > 0)
@@ -755,6 +761,7 @@ bool
 FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
     const char *location, const char *load_key) noexcept
 {
+    // spec says this is invoked in main thread.
     if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE)
     {
         char buf[2048];
@@ -790,7 +797,6 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
                 if(m_fontId != -1)
                     fluid_synth_sfunload(m_synth, m_fontId, 1);
                 m_fontId = id;
-                this->updateVoices();
                 return true;
             }
         } // fallthrough on error
@@ -816,60 +822,58 @@ FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept
         sfpath = "default.sf2";
     else
         sfpath = m_sfontPath.generic_string();
+    
+    std::stringstream sstr;
 
-    char buf[8];
-    strcpy(buf, "FSPG");
-    memcpy(buf+5, &vers, 2);
-    buf[7] = '\n';
-    ckIOError(stream->write(stream,buf, 8));
+    sstr << "{\"$schema\": \"fluidsynth.clap/v1\", "
+         << "\"sf\": \"" << sfpath << "\", "
+         << "\"params: {";
+    
+    for(int i=0;i<k_indexedParamCount;i++)
+    {
+        if(i != 0) sstr << ", ";
 
-    ckIOError(stream->write(stream, sfpath.c_str(), sfpath.size()));
-    ckIOError(stream->write(stream, "\n", 1));
-
-    ckIOError(stream->write(stream, &m_gain, sizeof(m_gain)));
-    ckIOError(stream->write(stream, "\n", 1));
-
-    // todo: effects parameters
-
-    int fontId; // ignored, currently we keep the same font for all channels
-    int bank, prog;
-    char bp[3];
-    bp[2] = '\n';
+        double value;
+        this->paramsValue(i, &value);
+        clap_param_info &info = s_fluidParams[i];
+        sstr << "\"" << info.name << "\": { \"id\":" << i 
+            << ", \"value\": " <<  value << "}";
+    }
+    sstr << "}, ";
+    
+    sstr << "\"programs\": [ ";
+    int fontId, bank, prog;
     for(int i=0;i<16;i++)
     {
         fluid_synth_get_program(m_synth, i, &fontId, &bank, &prog);
-        bp[0] = (char) bank;
-        bp[1] = (char) prog;
-        ckIOError(stream->write(stream, bp, 3));
+        if(i > 0) sstr << ", ";
+        sstr << "[" << bank << "," << prog << "]";
     }
+    sstr << "], \"voices\":";
+    this->serializeVoiceNames(sstr);
+    sstr << "}";
+
+    std::string s = sstr.str();
+    ckIOError(stream->write(stream, s.c_str(), s.size()));
     return true;
 }
 
 bool 
 FluidsynthPlugin::stateLoad(const clap_istream *stream) noexcept
 {
-    std::string sfpath;
-    float gain;
-    char buf[8];
-    ckIOError(stream->read(stream, buf, 8));
-    if(strcmp(buf, "FSPG") != 0)
-    {
-        std::cerr << "FluidsynthPlugin found bogus state\n";
-        return false;
-    }
+    std::string json;
+    char ibuf[1024];
+    int64_t nbytes;
 
-    uint16_t vers;
-    memcpy(&vers, buf+5, 2);
+    do {
+        nbytes = stream->read(stream, ibuf, 1024);
+        json.append(ibuf, nbytes);
+    } while(nbytes > 0);
+    ckIOError(nbytes);
 
-    if(vers > k_newStateVersion)
-    {
-        std::cerr << "FluidsynthPlugin found futuristic state (ignored)\n";
-        return false;
-    }
-
-    while(1 == stream->read(stream, buf, 1) && buf[0] != '\n')
-        sfpath.push_back(buf[0]);
-
+    RSJresource parser(json);
+    std::string schema = parser["$schema"].as<std::string>();
+    std::string sfpath = parser["sf"].as<std::string>();
     char const *location = sfpath.c_str();
     int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
     if(id == FLUID_OK)
@@ -877,22 +881,44 @@ FluidsynthPlugin::stateLoad(const clap_istream *stream) noexcept
         if(m_fontId != -1)
             fluid_synth_sfunload(m_synth, m_fontId, 1);
         m_fontId = id;
-        this->updateVoices();
     }
     else
     {
         std::cerr << "fluidsynth can't load " << location << "\n";
         return false;
     }
-    ckIOError(stream->read(stream, (char *) &gain, sizeof(gain)));
-    m_gain = gain;
-    ckIOError(stream->read(stream, buf, 1)); // newline
+    m_gain = (float) parser["gain"].as<double>(m_gain); // parser doesn't know float
+    // more params here...
 
-    for(int i=0;i<16;i++)
+    int i=0;
+    for(auto it=parser["programs"].as_array().begin(); 
+             it!=parser["programs"].as_array().end(); ++it)
     {
-        ckIOError(stream->read(stream, buf,  3));
-        fluid_synth_program_select(m_synth, i, m_fontId,
-                                    buf[0], buf[1]);
+
+        int bank, prog;
+        bank = it->as_array()[0].as<int>();
+        prog = it->as_array()[1].as<int>();
+        fluid_synth_program_select(m_synth, i++, m_fontId, bank, prog);
     }
     return true;
+}
+
+void
+FluidsynthPlugin::serializeVoiceNames(std::stringstream &sstr)
+{
+    fluid_sfont_t* sfont = fluid_synth_get_sfont_by_id(m_synth, m_fontId);
+    fluid_sfont_iteration_start(sfont);
+    sstr << "[\n";
+    int i=0;
+    for(fluid_preset_t* preset = fluid_sfont_iteration_next(sfont);
+        preset != nullptr; preset = fluid_sfont_iteration_next(sfont)) 
+    {
+        int bankNum = fluid_preset_get_banknum(preset);
+        int progNum = fluid_preset_get_num(preset);
+        if(i++ > 0) sstr << ",";
+        sstr << "{ \"b\":" << bankNum << ",";
+        sstr << " \"p\":" << progNum <<  ",";
+        sstr << " \"nm\": \"" << fluid_preset_get_name(preset) << "\" }";
+    }
+    sstr << "]";
 }

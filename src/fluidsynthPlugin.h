@@ -6,13 +6,10 @@
 #include <clap/helpers/misbehaviour-handler.hh>
 #include <clap/helpers/checking-level.hh>
 
-#include <choc/platform/choc_Platform.h>
-#include <choc/platform/choc_Assert.h>
-#include <choc/gui/choc_WebView.h>
-
 #include <string>
 #include <filesystem> // c++17 dependency
 #include <map>
+#include <iostream>
 
 /* ---------------------------------------------------------------------- */
 // our instances are created by the factory in dllMain
@@ -95,7 +92,11 @@ public:
     bool stateLoad(const clap_istream *stream) noexcept override; 
 
     /* -- gui ------------------------------------------------------- */
-    virtual bool implementsGui() const noexcept override { return true; }
+    virtual bool implementsGui() const noexcept override 
+    { 
+        // std::cerr << "implements GUI!\n";
+        return true; 
+    }
     virtual bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
     virtual bool guiGetPreferredApi(const char **api, bool *is_floating) noexcept override;
     virtual bool guiCreate(const char *api, bool isFloating) noexcept override; 
@@ -116,17 +117,8 @@ private:
     void processEvent(const clap_event_header_t *hdr);
     void setParamValue(int paramid, double value);
     uint32_t m_guiSize[2];
-    void updateVoices();
+    void serializeVoiceNames(std::stringstream &);
     std::string m_voices; // JSON string
-    bool guiSetVisible(bool);
-
-private: // gui
-    bool m_webviewReady = false;
-    choc::ui::WebView *m_webview = nullptr; // null unless InitWebview
-    using Resource = choc::ui::WebView::Options::Resource;
-    using Path = choc::ui::WebView::Options::Path;
-    std::optional<Resource> GetResource(Path const &);
-    choc::ui::WebView::Options m_webviewOptions;
 
 private:
     fluid_settings_t *m_settings;
@@ -156,9 +148,9 @@ private:
         k_ChorusMod,  // sine or triangle
         k_indexedParamCount,
 
-        k_Prog0 = 32,   // programs associated with 16 midi channels
+        k_Prog0 = 32,   // 32-47: programs associated with 16 midi channels
 
-        k_Bank0 = 48,   // banks associated with 16 midi channels
+        k_Bank0 = 48,   // 48-63: banks associated with 16 midi channels
 
         k_numParams = k_indexedParamCount + 32
     };

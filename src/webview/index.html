@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<style>
+html {
+    --scrollbarSize: 11px;
+    --thumbBgdColor: rgb(67, 78, 83);
+    --scrollbarBgdColor: #080808;
+    --thumbDragColor: rgb(55, 85, 140);
+    --titleColor: #6060A0;
+    --voicelistBgd: #050505; 
+    --activeBgd: #111d55;
+    --hoverBgd: #151515;
+    --headingColor: #40913f;
+    --linkColor: #8080FF;
+    --linkWeight: normal;
+}
+body {
+    background-color: #111;
+    border-width: 1px;
+    border: solid;
+    border-color: #080808;
+    color: #888;
+    height: 100vh;
+    width: 100%;
+    margin: 0px;
+    box-sizing: border-box;
+    padding: 10px;
+    scrollbar-width: thin; /* firefox */
+    scrollbar-color: var(--thumbBgdColor) var(--scrollbarBgdColor);
+}
+::-webkit-scrollbar {
+    width: var(--scrollbarSize);
+    height: var(--scrollbarSize)
+}
+::-webkit-scrollbar-track {
+    background: var(--scrollbarBgdColor);
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--thumbBgdColor);
+    border-radius: 8px;
+    border: 3px solid var(--scrollbarBgdColor);
+}
+::-webkit-scrollbar-corner {
+    background: rgba(0,0,0,0);
+}
+input {
+    color: #ccc;
+    background-color: #222;
+    border-width: thin;
+}
+h3,h4 {
+    font-size: 1.5em;
+    margin-block-start: 10px;
+    margin-block-end: 10px;
+    color: var(--headingColor);
+}
+h3 > a {
+    font-size: .7em;
+    color: var(--linkColor);
+    font-weight: var(--linkWeight); 
+}
+
+h5 {
+    font-size: 1em;
+    font-weight: normal;
+    color: var(--headingColor);
+    margin-block-start: 0px;
+    margin-block-end: 3px;
+}
+
+td,th {
+    text-align: left;
+    font-weight: normal;
+}
+tr {
+    border: 2px solid black;
+}
+#filepath {
+    width: 100%;
+}
+
+.Panels
+{
+    width: 100%;
+    max-height: 100%;
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    overflow-y: auto;
+}
+
+.Panel
+{
+    width: 350px;
+}
+
+.Group {
+    background-color: #000;
+    border: solid;
+    border-width: thin;
+    border-radius: 5px;
+    border-color: #404070;
+    padding: 10px;
+    margin-bottom: 5px;
+}
+.Group div,
+.Group > table {
+    margin-bottom: 5px;
+    padding-left: 5px;
+}
+.Group table {
+    width: 100%;
+}
+col.c1, col.c2 {
+    width: 3em;
+}
+.Title {
+    font-size: 1.15em;
+    color: var(--titleColor); 
+}
+.Label {
+    display: inline-block;
+    width: 8em;
+    padding-left: 5px;
+    padding-right: 10px;
+}
+#voicelist {
+    overflow-y: auto;
+    height: 11em;
+    background-color: var(--voicelistBgd);
+}
+#voicelist tr:hover {
+    background-color: var(--hoverBgd); 
+}
+#voicelist tr.active:hover,
+#voicelist tr.active {
+    background-color: var(--activeBgd);
+}
+#voicelist td {
+    cursor: pointer;
+}
+:focus {
+    outline: 1px dashed var(--titleColor);
+}
+</style>
+<body >
+    <div class="Panels"></div>
+
+<!------------------------------------------------------------------>
+<script src="index.js"></script>
+</body>
+</html>
