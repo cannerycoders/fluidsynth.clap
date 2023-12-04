@@ -127,6 +127,8 @@ private:
     int m_verbosity;
     std::filesystem::path m_pluginPath;
     std::vector<std::filesystem::path> m_pluginPresetDirs;
+
+    std::string m_sfontReq;
     std::filesystem::path m_sfontPath;
     mutable std::map<uint32_t, double> m_paramValues; // initialized during paramsInfo
 
@@ -155,6 +157,5 @@ private:
         k_numParams = k_indexedParamCount + 32
     };
     float m_gain = .2f;
-
     static clap_param_info s_fluidParams[];
 };

@@ -64,9 +64,10 @@ FluidsynthPlugin::FluidsynthPlugin(
     m_pluginPresetDirs.push_back(std::filesystem::path("/usr/local/share/sounds/sf2"));
     m_pluginPresetDirs.push_back(std::filesystem::path(home) / "Documents/sounds/sf2");
     #endif
+    m_sfontReq = "default.sf2";
     for(auto x : m_pluginPresetDirs)
     {
-        m_sfontPath = x / "default.sf2";
+        m_sfontPath = x / m_sfontReq;
         if(std::filesystem::exists(m_sfontPath))
             break;
     }
@@ -123,7 +124,7 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
                         m_sfontPath.generic_string().c_str(), 
                         1/*reset*/);
         if(m_verbosity > 0)
-            std::cerr << "fluid font " << m_sfontPath << " id:" << m_fontId << "\n";
+            std::cerr << "fluid font " << m_sfontReq << " id:" << m_fontId << "\n";
         this->setParamValue(k_Gain, 1.0);
 
         // send an activate message ? 
@@ -762,9 +763,11 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
     const char *location, const char *load_key) noexcept
 {
     // spec says this is invoked in main thread.
-    if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE)
+    // std::cerr << "fluidsynth.clap loadPreset " << location << "\n";
+    if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE || true)
     {
         char buf[2048];
+        m_sfontReq = location;
         std::filesystem::path fp(location);
         std::string tmp;
         bool found = false;
@@ -791,7 +794,7 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
             int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
             if(id != FLUID_FAILED)
             {
-                snprintf(buf, sizeof(buf), "fluidsynth loaded %s", location);
+                snprintf(buf, sizeof(buf), "fluidsynth loaded %s", m_sfontReq.c_str());
                 _host.log(CLAP_LOG_INFO, buf);
                 m_sfontPath = location;
                 if(m_fontId != -1)
@@ -801,7 +804,7 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
             }
         } // fallthrough on error
         snprintf(buf, sizeof(buf), "fluidsynth ERROR can't load %s", location);
-        _host.log(CLAP_LOG_INFO, buf);
+        _host.log(CLAP_LOG_WARNING, buf);
     }
     return false;
 }
@@ -816,30 +819,41 @@ FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept
     // stash the current soundfont path, gain and 16 prog/bank values
     // \n separates the 18 values.
 
-    std::string sfpath;
     uint16_t vers = k_newStateVersion;
-    if(m_sfontPath.filename().generic_string() == "default.sf2")
-        sfpath = "default.sf2";
-    else
-        sfpath = m_sfontPath.generic_string();
     
     std::stringstream sstr;
 
     sstr << "{\"$schema\": \"fluidsynth.clap/v1\", "
-         << "\"sf\": \"" << sfpath << "\", "
-         << "\"params: {";
+         << "\"sf\": \"" << m_sfontReq << "\", "
+         << "\"params\": {";
     
+    double value;
     for(int i=0;i<k_indexedParamCount;i++)
     {
         if(i != 0) sstr << ", ";
 
-        double value;
         this->paramsValue(i, &value);
         clap_param_info &info = s_fluidParams[i];
-        sstr << "\"" << info.name << "\": { \"id\":" << i 
-            << ", \"value\": " <<  value << "}";
+        sstr << "\"" << info.name 
+             << "\": { \"id\":" << i 
+             << ", \"value\": " << value;
+
+        sstr << ", \"range\": [" << info.min_value << "," 
+                                 << info.max_value;
+        if(info.flags & CLAP_PARAM_IS_STEPPED) sstr << ", 1";
+        sstr << "]";
+
+        sstr << "}";
     }
     sstr << "}, ";
+
+    this->paramsValue(k_Prog0, &value);
+    sstr << "\"prog0\": { \"id\":" << k_Prog0 
+          << ", \"value\":" << int(value) << ", \"range\": [0, 127, 1]}, ";
+
+    this->paramsValue(k_Bank0, &value);
+    sstr << "\"bank0\": { \"id\":" << k_Bank0 
+          << ", \"value\":" << int(value) << ", \"range\": [0, 127, 1]}, ";
     
     sstr << "\"programs\": [ ";
     int fontId, bank, prog;
@@ -855,6 +869,8 @@ FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept
 
     std::string s = sstr.str();
     ckIOError(stream->write(stream, s.c_str(), s.size()));
+
+    // std::cerr << s << "\n"; // to debug json
     return true;
 }
 

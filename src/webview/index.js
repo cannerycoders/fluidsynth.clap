@@ -14,7 +14,7 @@ class FluidInstance
   </div>
   <div class="Group">
     <div class="Title">Parameters</div>
-    <div><div class="Label">Gain</div><input id="gain" type="number" value="1" min="0" max="8" step=".1"></div>
+    <div id="params"></div>
     <div><div class="Label">Voice, Bank, Prog</div><span id="voicename"></span> <span id="bank">0</span>, <span id="prog">0</span></div>
     <div class="Title">Voices</div>
     <table>
@@ -25,6 +25,7 @@ class FluidInstance
   </div>
 </div>`);
         this.panel = document.querySelector(`#panel${iid}`);
+        this.paramsEl = this.panel.querySelector("#params");
         this.initBindings();
         this.ctx.requestState(this.iid);
     }
@@ -39,7 +40,7 @@ class FluidInstance
         case "hide":
             this.panel.style.display = "none";
             break;
-        case "setPluginState":
+        case "pluginSetState":
             this.updateState(evt.data.state);
             break;
         }
@@ -90,9 +91,44 @@ class FluidInstance
     {
         try
         {
-            let o = JSON.parse(json);
-            if(o.voices)
-                this.updateVoices(o.voices);
+            this.state = JSON.parse(json);
+            this.panel.querySelector("#filepath").value = this.state.sf;
+            if(this.state.voices)
+                this.updateVoices(this.state.voices);
+            if(this.state.params) // a dict keyed by name. contains id, param, range
+            {
+                let html = [];
+                for(let name in this.state.params)
+                {
+                    let p = this.state.params[name];
+                    html.push(`<div><div class="Label">${name}</div>`);
+                    let [min,max,step] = p.range;
+                    if(step == null) step = (max - min) / 100;
+                    if(step == 1 && min == 0 && max == 1)
+                    {
+                        let val = p.value ? "checked" : "";
+                        html.push(`<input id="${p.id}" type="checkbox" ${val} value="${p.value}">`);
+                    }
+                    else
+                    {
+                        html.push(`<input id="${p.id}" type="number" value="${p.value}"`);
+                        html.push(` min="${min}" max="${max}" step="${step}">`);
+                    }
+                    html.push("</div>");
+                }
+                this.paramsEl.innerHTML = html.join("");
+
+                for(let el of this.paramsEl.querySelectorAll("input"))
+                {
+                    el.onchange = (evt) =>
+                    {
+                        if(evt.target.type == "checkbox")
+                            this.ctx.setParam(this.iid, evt.target.id, evt.target.checked ? 1 : 0);
+                        else
+                            this.ctx.setParam(this.iid, evt.target.id, evt.target.value);
+                    };
+                }
+            }
         }
         catch(err)
         {
@@ -146,8 +182,8 @@ class FluidInstance
         prog.innerText = oi.p;
         bank.innerText = oi.b;
         voicename.innerText = oi.nm;
-        this.ctx.setParam(this.iid, "prog0", `${oi.p}`); // value must be string
-        this.ctx.setParam(this.iid, "bank0", `${oi.b}`); 
+        this.ctx.setParam(this.iid, this.state.prog0.id, `${oi.p}`); // value must be string
+        this.ctx.setParam(this.iid, this.state.bank0.id, `${oi.b}`); 
     }
 }
 
@@ -180,15 +216,15 @@ class FluidGUI
         });
     }
 
-    setParam(iid, name, value)
+    setParam(iid, pid, value)
     {
-        parent.postMessage({msg: "log", val: `${iid}.setParam ${name} ${value}`}, "*");
+        parent.postMessage({msg: "pluginSetParam", iid: iid, pid: pid, val: value}, "*");
     }
 
     requestState(iid)
     {
         // console.log("-------------------requestState for " + iid);
-        parent.postMessage({msg: "getPluginState", iid: iid}, "*");
+        parent.postMessage({msg: "pluginGetState", iid: iid}, "*");
     }
 
     log(msg)
