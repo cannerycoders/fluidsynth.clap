@@ -120,6 +120,7 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
             fluid_settings_setint(m_settings, "synth.verbose", 1);
         }
         m_synth = new_fluid_synth(m_settings);
+        fluid_synth_set_gain(m_synth, (float) s_fluidParams[0].default_value);
         m_fontId = fluid_synth_sfload(m_synth, 
                         m_sfontPath.generic_string().c_str(), 
                         1/*reset*/);
@@ -528,6 +529,7 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
         }
         found = true;
     }
+
     if(found)
         m_paramValues[info->id] = info->default_value;
     return found;
@@ -636,11 +638,12 @@ FluidsynthPlugin::paramsValue(clap_id paramid, double *value) noexcept
 void
 FluidsynthPlugin::setParamValue(int paramid, double value)
 {
+    m_paramValues[paramid] = value;
+    if(!m_synth) return;
+
     if(paramid == k_Gain)
     {
-        m_gain = (float) value;
-        if(m_synth)
-            fluid_synth_set_gain(m_synth, m_gain);
+        fluid_synth_set_gain(m_synth, (float) value);
     }
     else
     if(paramid <= k_RevLevel)

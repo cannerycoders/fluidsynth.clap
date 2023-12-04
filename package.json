@@ -1,7 +1,7 @@
 {
   "name": "fluidsynth.clap",
   "label": "FluidSynth.clap",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CLAP bridge to open source audio soundfont synthesizer",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

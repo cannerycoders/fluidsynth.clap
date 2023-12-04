@@ -14,7 +14,7 @@
  *     FluidSynth.clap/  <-- a directory/bundle
  *          Contents/
  *          MacOS/
- *              FluidSynth.dylib <-- the real clap plugin
+ *              fluidsynth <-- the real clap plugin (shouldn't include .clap)
  *          PkgInfo
  *          Resources/
  *             clap.icns
@@ -100,7 +100,7 @@ let defs = {
     CLAP_NO_YAS: null
 };
 
-let t1 = m.NewTask("compile", "cpp->o", 
+let t1 = m.NewTask("compile", "cpp->o",
 {
     inputs: Project.Glob("src/*.cpp"),
     defs,
@@ -140,6 +140,7 @@ switch(platform)
 case "linux":
 case "win32":
     {
+        let ts = jsmk.GetActiveToolset().GetHandle();
         let dsoGlob = (platform == "linux") ? "lib/*so*" : "bin/*.dll";
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
@@ -157,7 +158,7 @@ case "win32":
             installdir: "etc",
         });
         /* finally, we zip ------------------------------- */
-        let zipfile = `${appName}.zip`;
+        let zipfile = `${appName}.${ts}.zip`;
         m.NewTask("fluidsynthPackage", "packagescript", {
             ARGUMENTS: ["build/zipdir.js", installRoot,
                 jsmk.path.join(installRoot, "..", zipfile)]
@@ -172,7 +173,7 @@ case "darwin":
         let resourcesDir = "Contents/Resources";
         let tcpy = m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
-            installext: "", // <--- need separate rule for other files (ClapHost.dylib in Info.plist)
+            installext: "", // <--------- need separate rule for other files
             installdir: binDir,
         });
         /* no frameworks atm, statically linked 
@@ -201,17 +202,20 @@ case "darwin":
             ]
         });
 
+        let ts = jsmk.GetActiveToolset().GetHandle();
+        let dmgExt = `.${ts}.dmg`;
         m.NewTask("osxdmg", "packagescript", 
         {
             ARGUMENTS: [
-                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", installRoot+".dmg"
+                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", 
+                installRoot+dmgExt
             ]
         });
         
         m.NewTask("osxnotarize", "repositscript",
         {
             ARGUMENTS: [
-                "build/darwin/osxnotarize.js", installRoot+".dmg"
+                "build/darwin/osxnotarize.js", installRoot+dmgExt
             ]
         });
     }

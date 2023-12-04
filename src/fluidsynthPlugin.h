@@ -9,7 +9,6 @@
 #include <string>
 #include <filesystem> // c++17 dependency
 #include <map>
-#include <iostream>
 
 /* ---------------------------------------------------------------------- */
 // our instances are created by the factory in dllMain
@@ -130,7 +129,7 @@ private:
 
     std::string m_sfontReq;
     std::filesystem::path m_sfontPath;
-    mutable std::map<uint32_t, double> m_paramValues; // initialized during paramsInfo
+    mutable std::map<uint32_t, double> m_paramValues; // init at paramsInfo()
 
     enum paramId
     {

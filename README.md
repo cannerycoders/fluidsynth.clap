@@ -5,9 +5,10 @@
 - [presets, soundfonts](#presets-soundfonts)
 - [state save/restore](#state-saverestore)
 - [parameters](#parameters)
-- [known issues](#known-issues)
-  - [gui issues](#gui-issues)
 - [release history](#release-history)
+- [known issues](#known-issues)
+  - [Using with clap-host example host:](#using-with-clap-host-example-host)
+  - [Windows](#windows)
 - [see also](#see-also)
 - [devinstall](#devinstall)
   - [win32](#win32)
@@ -74,7 +75,7 @@ Here are a few sources for free soundfonts:
 * [FluidR3_GM](https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip)
 * [Fatboy](https://fatboy.site/)
 * [MuseScore links](https://musescore.org/en/handbook/soundfonts-and-sfz-files#list)
-* [FlameStudios guitar soundfonts](https://www.hedsound.com/2019/07/flamestudios-guitar-soundfonts-in-sf2.html)
+* [FlameStudios guitar soundfonts](http://www.hedsound.com/2019/07/flamestudios-guitar-soundfonts-in-sf2.html)
 
 ## state save/restore
 
@@ -115,27 +116,28 @@ Here are the exposed/supported fluidsynth parameters and their ids.
 
 More details on these settings can be found [in the fluidsynth docs](https://www.fluidsynth.org/api/settings_synth.html).
 
-## known issues
-
-[clap-host](https://github.com/free-audio/clap-host) has problems loading 
-FluidSynth.clap in various CLI configurations (eg windows+git-bash). It
-seems to work when your CWD is  `...CLAP/FluidSynth.clap` and launched
-with clap-host -p ./FluidSynth.clap.
-
-### gui issues
-
-Currently the GUI is based on [choc's webview](https://github.com/tracktion/choc).
-This seems to work okay with clap-host on windows but not with other hosts that
-also includes a webview instance.  The same is true on MacOS but with the added
-complexity that the webview requires special entitlements that are defined by 
-the app (and beyond our control).
-
 ## release history
 
-* 0.1.0 - windows only (didn't work with clap-host)
-* 0.2.0 - three platforms (still buggy for clap-host)
-* 0.3.0 - experimental - simple GUI, works with clap-host 
-  (but see [known issues](#guiissues)).
+* 0.1.0 - windows only (crashed clap-host)
+* 0.2.0 - three platforms (crashed clap-host)
+* 0.2.1 - fixed crashing issues with clap-host (7/8/2023)
+
+## known issues
+
+### Using with clap-host example host:
+
+* clap-host doesn't deliver/implement all the MIDI events esp: 
+    * program change
+    * pitch-wheel
+    * doesn't handle transitive dlls on windows
+
+### Windows
+
+* our plugin needs external dlls to access fluidsynth functions.
+  Some CLAP hosts handle this, others don't. Developers of Clap Hosts
+  should consider adding a call to `SetDllDirectory(..dir that contains dlls...)`.
+  Otherwise you might experiment with including this dir in your PATH or
+  even launching the host from within the FluidSynth.clap directory.
 
 ## see also
 
@@ -154,7 +156,7 @@ plugin you need only download the latest .zip file and decompress it
 into a standard CLAP location (system or user).
 
 Depending on your CLAP host and platform security settings, you may still need
-to add the location of `fluidsynth.clap` to `PATH`, and/or `LD_LIBRARY_PATH`.
+to add the location of `FluidSynth.clap` to `PATH`, and/or `LD_LIBRARY_PATH`.
 
 If you wish to build or download fluidsynth yourself, please proceed to
 the platform-specific instructions that follow.
@@ -164,7 +166,7 @@ the platform-specific instructions that follow.
 Windows users can download a pre-compiled collection of fluidsynth
 runtime components [here](https://github.com/FluidSynth/fluidsynth/releases).
 The .zip file is organized in linux fashion with `bin`, `lib` and `include`
-directories.  In order for fluidsynth.clap to find the .dll files you may
+directories.  In order for FluidSynth.clap to find the .dll files you may
 need to add the install location to your PATH.
 
 Another approach is to install vcpkg and then build fluidsynth yourself.
