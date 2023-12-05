@@ -1,12 +1,13 @@
 class FluidInstance
 {
-    constructor(iid, parentDiv, ctx)
+    constructor(iid, sid, parentDiv, ctx)
     {
         this.ctx = ctx;
         this.iid = iid;
+        this.sid = sid;
         parentDiv.insertAdjacentHTML("beforeend", `
 <div class="Panel" id="panel${iid}">
-  <h5>Settings for instance ${iid}</h5>
+  <h5>Settings for instance ${sid}</h5>
   <div class="Group">
     <!-- just want a file-pathname widget, no drop-zone etc -->
     <div class="Title">Sound Font</div>
@@ -27,7 +28,7 @@ class FluidInstance
         this.panel = document.querySelector(`#panel${iid}`);
         this.paramsEl = this.panel.querySelector("#params");
         this.initBindings();
-        this.ctx.requestState(this.iid);
+        this.ctx.requestState(this.iid, this.sid);
     }
 
     handleEvent(evt)
@@ -202,12 +203,18 @@ class FluidGUI
         {
             if(evt.data.iid != null)
             {
+                let sid = evt.data.sid;
                 let iid = evt.data.iid;
-                let inst = this.instances[iid];
+                let inst = this.instances[sid];
                 if(!inst)
                 {
-                    inst = new FluidInstance(iid, this.panelsDiv, this);
-                    this.instances[iid] = inst;
+                    inst = new FluidInstance(iid, sid, this.panelsDiv, this);
+                    this.instances[sid] = inst;
+                }
+                else
+                if(inst.iid != iid)
+                {
+                    console.log("fluidsynth iid botch");
                 }
                 inst.handleEvent(evt);
             }
@@ -221,10 +228,10 @@ class FluidGUI
         parent.postMessage({msg: "pluginSetParam", iid: iid, pid: pid, val: value}, "*");
     }
 
-    requestState(iid)
+    requestState(iid, sid)
     {
         // console.log("-------------------requestState for " + iid);
-        parent.postMessage({msg: "pluginGetState", iid: iid}, "*");
+        parent.postMessage({msg: "pluginGetState", iid: iid, sid: sid}, "*");
     }
 
     log(msg)
