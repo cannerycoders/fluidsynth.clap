@@ -798,16 +798,23 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
             if(id != FLUID_FAILED)
             {
                 snprintf(buf, sizeof(buf), "fluidsynth loaded %s", m_sfontReq.c_str());
-                _host.log(CLAP_LOG_INFO, buf);
                 m_sfontPath = location;
                 if(m_fontId != -1)
                     fluid_synth_sfunload(m_synth, m_fontId, 1);
                 m_fontId = id;
+                if(_host.canUsePresetLoad())
+                    _host.presetLoadLoaded(location_kind, location, load_key);
+                else
+                    _host.log(CLAP_LOG_INFO, buf);
                 return true;
             }
         } // fallthrough on error
         snprintf(buf, sizeof(buf), "fluidsynth ERROR can't load %s", location);
         _host.log(CLAP_LOG_WARNING, buf);
+        if(_host.canUsePresetLoad())
+            _host.presetLoadOnError(location_kind, location, load_key, -1, buf);
+        else
+            _host.log(CLAP_LOG_WARNING, buf);
     }
     return false;
 }
