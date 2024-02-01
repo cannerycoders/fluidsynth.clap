@@ -11,3 +11,4 @@ _released/
 .ignore/
 .DS_Store
 BUILD.json
+dist/

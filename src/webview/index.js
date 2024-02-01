@@ -1,8 +1,13 @@
+/**
+ * FluidInstance is associated within a single instance of
+ * a FluidSynth.clap plugin.  We reside within and are
+ * managed by the FluidGUI.
+ */
 class FluidInstance
 {
-    constructor(iid, sid, parentDiv, ctx)
+    constructor(iid, sid, parentDiv, fluidGui)
     {
-        this.ctx = ctx;
+        this.fluidGui = fluidGui;
         this.iid = iid;
         this.sid = sid;
         parentDiv.insertAdjacentHTML("beforeend", `
@@ -28,7 +33,7 @@ class FluidInstance
         this.panel = document.querySelector(`#panel${iid}`);
         this.paramsEl = this.panel.querySelector("#params");
         this.initBindings();
-        this.ctx.requestState(this.iid, this.sid);
+        this.fluidGui.getState(this.iid, this.sid);
     }
 
     handleEvent(evt)
@@ -65,7 +70,7 @@ class FluidInstance
                     item.getAsString((s) =>
                     {
                         sfel.value = s;
-                        this.ctx.setParam(this.iid, sfel.id, s);
+                        this.fluidGui.setParam(this.iid, sfel.id, s);
                     });
                 }
                 else
@@ -73,17 +78,17 @@ class FluidInstance
                 {
                     const file = item.getAsFile();
                     sfel.value = file.name;
-                    this.ctx.setParam(this.iid, sfel.id, file.name);
+                    this.fluidGui.setParam(this.iid, sfel.id, file.name);
                 }
                 else
-                    this.ctx.log(`can't drop ${item.kind}`);
+                    this.fluidGui.log(`can't drop ${item.kind}`);
             }
         });
         for(let el of this.panel.querySelectorAll("input"))
         {
             el.onchange = (evt) =>
             {
-                this.ctx.setParam(this.iid, evt.target.id, evt.target.value);
+                this.fluidGui.setParam(this.iid, evt.target.id, evt.target.value);
             };
         }
     }
@@ -124,16 +129,16 @@ class FluidInstance
                     el.onchange = (evt) =>
                     {
                         if(evt.target.type == "checkbox")
-                            this.ctx.setParam(this.iid, evt.target.id, evt.target.checked ? 1 : 0);
+                            this.fluidGui.setParam(this.iid, evt.target.id, evt.target.checked ? 1 : 0);
                         else
-                            this.ctx.setParam(this.iid, evt.target.id, evt.target.value);
+                            this.fluidGui.setParam(this.iid, evt.target.id, evt.target.value);
                     };
                 }
             }
         }
         catch(err)
         {
-            this.ctx.log("WARNING json botch " + err);
+            this.fluidGui.log("WARNING json botch " + err);
         }
     }
 
@@ -183,8 +188,8 @@ class FluidInstance
         prog.innerText = oi.p;
         bank.innerText = oi.b;
         voicename.innerText = oi.nm;
-        this.ctx.setParam(this.iid, this.state.prog0.id, `${oi.p}`); // value must be string
-        this.ctx.setParam(this.iid, this.state.bank0.id, `${oi.b}`); 
+        this.fluidGui.setParam(this.iid, this.state.prog0.id, `${oi.p}`); // value must be string
+        this.fluidGui.setParam(this.iid, this.state.bank0.id, `${oi.b}`); 
     }
 }
 
@@ -225,18 +230,31 @@ class FluidGUI
 
     setParam(iid, pid, value)
     {
-        parent.postMessage({msg: "pluginSetParam", iid: iid, pid: pid, val: value}, "*");
+        let anyOrigin = "*";
+        parent.postMessage({
+            msg: "pluginSetParam", 
+            iid, pid, 
+            val: value
+        }, anyOrigin);
     }
 
-    requestState(iid, sid)
+    getState(iid, sid)
     {
-        // console.log("-------------------requestState for " + iid);
-        parent.postMessage({msg: "pluginGetState", iid: iid, sid: sid}, "*");
+        let anyOrigin = "*";
+        // console.log("-------------------getState for " + iid);
+        parent.postMessage({
+            msg: "pluginGetState", 
+            iid, sid
+        }, anyOrigin);
     }
 
     log(msg)
     {
-        parent.postMessage({msg: "log", val: msg}, "*");
+        let anyOrigin = "*";
+        parent.postMessage({
+            msg: "log", 
+            val: msg
+        }, anyOrigin);
     }
 }
 

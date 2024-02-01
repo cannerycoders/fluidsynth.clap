@@ -60,7 +60,6 @@ FluidsynthPlugin::guiSuggestTitle(const char *title) noexcept
     // would be nice to deliver this to gui, preferred over instance 10000
 }
 
-
 bool
 FluidsynthPlugin::guiSetTransient(const clap_window *window) noexcept 
 {
