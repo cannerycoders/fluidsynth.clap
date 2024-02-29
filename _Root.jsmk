@@ -132,7 +132,7 @@ let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
 
 m.NewTask("installWebview", "install", {
     inputs: Project.Glob("src/webview/*"),
-    installdir: "webview"
+    installdir: platform == "darwin" ? "Contents/Resources/webview" : "webview"
 });
 
 switch(platform)
