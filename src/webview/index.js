@@ -193,19 +193,30 @@ class FluidInstance
     }
 }
 
+const sHeader = `
+<div style="width:100%"><h3>FluidSynth.clap  
+    <a href="https://github.com/cannerycoders/fluidsynth.clap" target="_blank">github</a> |
+    <a href="http://fluidsynth.org" target="_blank">fluidsynth.org</a>
+</h3></div>`;
 class FluidGUI
 {
     constructor()
     {
         this.panelsDiv = document.querySelector(".Panels"); 
-        this.panelsDiv.innerHTML = `
-    <div style="width:100%"><h3>FluidSynth.clap  
-        <a href="https://github.com/cannerycoders/fluidsynth.clap" target="_blank">github</a> |
-        <a href="http://fluidsynth.org" target="_blank">fluidsynth.org</a>
-    </h3></div>`;
+        this.panelsDiv.innerHTML = sHeader;
         this.instances = {};
         window.addEventListener("message", (evt) =>
         {
+            if(evt.data.msg == "create" || evt.data.msg == "updateHints")
+            {
+            }
+            else
+            if(evt.data.msg == "clear")
+            {
+                this.instances = {}
+                this.panelsDiv.innerHTML = sHeader;
+            }
+            else
             if(evt.data.iid != null)
             {
                 let sid = evt.data.sid;
@@ -224,7 +235,8 @@ class FluidGUI
                 inst.handleEvent(evt);
             }
             else
-                this.log("ERROR: unhandled message " + JSON.stringify(evt.data));
+                this.log("FluidSynth ERROR: unhandled GUI message " + 
+                            JSON.stringify(evt.data));
         });
     }
 

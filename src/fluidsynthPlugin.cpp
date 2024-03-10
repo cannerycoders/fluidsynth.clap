@@ -236,14 +236,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_NOTE_CHOKE: 
             {
                 // const clap_event_note_t *ev = (const clap_event_note_t *)hdr;
-                std::cerr << "TODO: handle note choke\n";
+                std::cerr << "FluidSynth.clap TODO: handle note choke\n";
                 break;
             }
 
         case CLAP_EVENT_NOTE_EXPRESSION: 
             {
                 // const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
-                std::cerr << "TODO: handle note expression\n";
+                std::cerr << "FluidSynth.clap TODO: handle note expression\n";
                 break;
             }
 
@@ -258,14 +258,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_PARAM_MOD: 
             {
                 // const clap_event_param_mod_t *ev = (const clap_event_param_mod_t *)hdr;
-                std::cerr << "TODO: handle parameter modulation\n";
+                std::cerr << "FluidSynth.clap TODO: handle parameter modulation\n";
                 break;
             }
 
         case CLAP_EVENT_TRANSPORT: 
             {
                 // const clap_event_transport_t *ev = (const clap_event_transport_t *)hdr;
-                std::cerr << "TODO: handle transport event\n";
+                std::cerr << "FluidSynth.clap TODO: handle transport event\n";
                 break;
             }
 
@@ -303,7 +303,7 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
                     }
                     break;
                 default:
-                    std::cout << "TODO: handle MIDI event 0x" 
+                    std::cout << "FluidSynth.clap TODO: handle MIDI event 0x" 
                         << std::setfill('0') << std::setw(2)
                         << std::hex << (int) ev->data[0] 
                         << (int) ev->data[1] 
@@ -316,14 +316,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_MIDI_SYSEX: 
             {
                 // const clap_event_midi_sysex_t *ev = (const clap_event_midi_sysex_t *)hdr;
-                std::cerr << "TODO: handle MIDI sysex event\n";
+                std::cerr << "FluidSynth.clap TODO: handle MIDI sysex event\n";
                 break;
             }
 
         case CLAP_EVENT_MIDI2: 
             {
                 // const clap_event_midi2_t *ev = (const clap_event_midi2_t *)hdr;
-                std::cerr << "TODO: handle MIDI2 event\n";
+                std::cerr << "FluidSynth.clap TODO: handle MIDI2 event\n";
                 break;
             }
         }
