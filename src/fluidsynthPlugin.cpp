@@ -119,6 +119,7 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
             // per-channel config, per-note details
             fluid_settings_setint(m_settings, "synth.verbose", 1);
         }
+        fluid_settings_setnum(m_settings, "synth.sample-rate", sampleRate);
         m_synth = new_fluid_synth(m_settings);
         fluid_synth_set_gain(m_synth, (float) s_fluidParams[0].default_value);
         m_fontId = fluid_synth_sfload(m_synth, 
@@ -136,7 +137,6 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
         std::cerr << "fluid activate " << sampleRate << " " 
             << minFrameCount << "-" << maxFrameCount << "\n";
     }
-    fluid_settings_setnum(m_settings, "synth.sample-rate", sampleRate);
     return true;
 }
 
