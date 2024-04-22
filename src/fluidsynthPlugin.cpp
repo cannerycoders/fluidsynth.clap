@@ -242,8 +242,59 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
 
         case CLAP_EVENT_NOTE_EXPRESSION: 
             {
-                // const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
-                std::cerr << "FluidSynth.clap TODO: handle note expression\n";
+                // For now we dump-down clap expressions and represent as MIDI.
+                const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
+                int chan = ev->channel;
+                int key = ev->key;
+                double val = ev->value;
+                // port_index, note_id ignored by MIDI, 
+                switch(ev->expression_id)
+                {
+                case CLAP_NOTE_EXPRESSION_VOLUME: // 0+ - 4 (20 * log(x))
+                    val = val > 4 ? 4 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 7/*CC7*/, (int) ((val/4)*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_PAN: // 0-1
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 10/*CC10*/, (int) (val * 127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_TUNING: // relative tuning in semitone, from -120 to +120
+                    {
+                        // convert -2, 2 onto 0-16384
+                        int pitchbend;
+                        if(std::abs(val) < .0001)
+                            pitchbend = 8192;
+                        else
+                        {
+                            if(val > 2) val = 2;
+                            else if(val < -2) val = -2;
+                            pitchbend = (int) (((2 + val) / 4) * 16383);
+                        }
+                        // std::cerr << "FluidSynth.clap CLAP pitch bend " 
+                        //   << chan << " " << pitchbend << "\n";
+                        fluid_synth_pitch_bend(m_synth, chan, pitchbend);
+                    }
+                    break;
+                case CLAP_NOTE_EXPRESSION_VIBRATO:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 77/*cc77*/, (int)(val*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_EXPRESSION:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 11/*cc11*/, (int)(val*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_BRIGHTNESS:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 74/*cc74*/, (int)(val*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_PRESSURE:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_key_pressure(m_synth, chan, key, (int)(val*127));
+                    break;
+                default:
+                    std::cerr << "FluidSynth.clap TODO: handle custom note expression\n";
+                    break;
+                }
                 break;
             }
 
@@ -299,6 +350,8 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
                         int lsb = ev->data[1] & 0x7F;
                         int msb = ev->data[2] & 0x7F;
                         int pitchbend = lsb + (msb << 7);
+                        // std::cerr << "FluidSynth.clap MIDI pitch bend " 
+                        //   << chan << " " << pitchbend << "\n";
                         fluid_synth_pitch_bend(m_synth, chan, pitchbend);
                     }
                     break;
