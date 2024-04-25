@@ -107,7 +107,7 @@ std::string strip_outer_quotes (std::string str, char* qq=NULL) {
 
 inline 
 int is_bracket (char c, std::vector<char const*>& bracks, int indx=0) {
-    for (int b=0; b<bracks.size(); ++b)
+    for (unsigned b=0; b<bracks.size(); ++b)
         if (c==bracks[b][indx]) 
             return (b);
     return (-1);
@@ -124,7 +124,7 @@ std::vector<std::string> split_RSJ_array (const std::string& str) { // TODO: Mak
     bool escape_active = false;
     int bi;
     
-    for (int a=0; a<str.length(); ++a) { // *
+    for (unsigned a=0; a<str.length(); ++a) { // *
         
         // delimiter
         if ( bracket_stack.size()==0  &&  quote_stack.size()==0  &&  str[a]==RSJarraydelimiter ) {
@@ -166,7 +166,7 @@ std::vector<std::string> split_RSJ_array (const std::string& str) { // TODO: Mak
             // single-line commenst
             if (str.compare (a, RSJlinecommentstart.length(), RSJlinecommentstart) == 0) {
                 // ignore until end of line
-                int newline_pos = str.find ("\n", a);
+                unsigned newline_pos = str.find ("\n", a);
                 if (newline_pos == std::string::npos)
                     newline_pos = str.find ("\r", a);
                 
@@ -206,7 +206,7 @@ std::vector<std::string> split_RSJ_array (const std::string& str) { // TODO: Mak
 
 inline 
 std::string insert_tab_after_newlines (std::string str) {
-    for (int a=0; a<str.length(); ++a)
+    for (unsigned a=0; a<str.length(); ++a)
         if (str[a]=='\n') {
             str.insert (a+1, RSJprinttab);
             a += RSJprinttab.length();
@@ -271,7 +271,7 @@ public:
     RSJresourceType parse (bool force=false);
     void parse_full (bool force=false, int max_depth=INT_MAX, int* parse_count_for_verbose_p=NULL); // recursively parse the entire JSON text
     // parser (new)
-    void fast_parse (std::string* str_p=NULL, bool copy_string=false, int max_depth=INT_MAX, int* parse_start_str_pos=NULL); // TODO: finish.
+    void fast_parse (std::string* str_p=NULL, bool copy_string=false, int max_depth=INT_MAX, unsigned* parse_start_str_pos=NULL); // TODO: finish.
     
     RSJobject& as_object (bool force=false);
     RSJarray& as_array (bool force=false);
@@ -291,7 +291,7 @@ public:
     
     // opertor[]
     RSJresource& operator[] (std::string key); // object
-    RSJresource& operator[] (int indx); // array
+    RSJresource& operator[] (unsigned indx); // array
     
     // ------------------------------------
     
@@ -330,7 +330,7 @@ public:
             content = strtrim (strtrim (content, "{", 1, STRTRIM_L ), "}", 1, STRTRIM_R );
             if (content.length() != data.length()) { // a valid object
                 std::vector<std::string> nvPairs = split_RSJ_array (content);
-                for (int a=0; a<nvPairs.size(); ++a) {
+                for (unsigned a=0; a<nvPairs.size(); ++a) {
                     std::size_t assignmentPos = nvPairs[a].find (RSJobjectassignment);
                     object.insert (make_pair( 
                                         strip_outer_quotes (nvPairs[a].substr (0,assignmentPos) ) ,
@@ -349,7 +349,7 @@ public:
             content = strtrim (strtrim (content, "[", 1, STRTRIM_L ), "]", 1, STRTRIM_R );
             if (content.length() != data.length()) { // a valid array
                 std::vector<std::string> nvPairs = split_RSJ_array (content);
-                for (int a=0; a<nvPairs.size(); ++a) 
+                for (unsigned a=0; a<nvPairs.size(); ++a) 
                     array.push_back (RSJresource (strtrim (nvPairs[a]) ) );
                 if (array.size() > 0) {
                     type = RSJ_ARRAY;
@@ -510,11 +510,11 @@ void RSJresource::parse_full (bool force, int max_depth, int* parse_count_for_ve
 
 inline 
 int seek_next (std::string* str_p, int start_pos, char character) {
-    
+    return 0;    
 }
 
 inline 
-void RSJresource::fast_parse (std::string* str_p, bool copy_string, int max_depth, int* parse_start_str_pos) {
+void RSJresource::fast_parse (std::string* str_p, bool copy_string, int max_depth, unsigned* parse_start_str_pos) {
     // TODO: UNDER CONSTRUCTION...
     
     if (!str_p)
@@ -534,12 +534,12 @@ void RSJresource::fast_parse (std::string* str_p, bool copy_string, int max_dept
     bool isroot = false;
     
     if (!parse_start_str_pos) {
-        parse_start_str_pos = new int;
+        parse_start_str_pos = new unsigned;
         *parse_start_str_pos = 0;
         isroot = true;
     }
     
-    int a = *parse_start_str_pos;
+    unsigned a = *parse_start_str_pos;
     
     while (*parse_start_str_pos < str_p->length()) { // *
         
@@ -600,7 +600,7 @@ void RSJresource::fast_parse (std::string* str_p, bool copy_string, int max_dept
             // single-line commenst
             if (str.compare (a, RSJlinecommentstart.length(), RSJlinecommentstart) == 0) {
                 // ignore until end of line
-                int newline_pos = str.find ("\n", a);
+                unsigned newline_pos = str.find ("\n", a);
                 if (newline_pos == std::string::npos)
                     newline_pos = str.find ("\r", a);
                 
@@ -666,7 +666,7 @@ RSJarray& RSJresource::as_array (bool force) {
 }
 
 inline 
-RSJresource& RSJresource::operator[] (int indx) { // returns reference
+RSJresource& RSJresource::operator[] (unsigned indx) { // returns reference
     as_array();
     if (indx >= parsed_data_p->array.size())
         parsed_data_p->array.resize(indx+1); // insert empty resources
@@ -737,7 +737,7 @@ std::string  RSJresource::as<std::string> (const std::string& def) {
     else if (qq=='\'')
         escapes.push_back ({"\\'","'"});
     
-    for (int a=0; a<escapes.size(); ++a)
+    for (unsigned a=0; a<escapes.size(); ++a)
         for ( std::size_t start_pos=ret.find(escapes[a][0]); start_pos!=std::string::npos; start_pos=ret.find(escapes[a][0],start_pos) ) {
             ret.replace (start_pos, escapes[a][0].length(), escapes[a][1]);
             start_pos += escapes[a][1].length();

@@ -2,6 +2,7 @@
 
 #include <clap/helpers/host-proxy.hxx>
 #include <iostream>
+#include <cstring>
 
 bool 
 FluidsynthPlugin::guiIsApiSupported(const char *api, bool isFloating) noexcept 
