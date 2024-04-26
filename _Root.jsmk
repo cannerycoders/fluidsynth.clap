@@ -58,15 +58,20 @@ let installRoot = Project.EvaluateBuildVar("InstallDir");
 
 let fpkg = {
     win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
-    linux: "_prebuilt/fluidsynth-2.3.3-linux-x64",
+    linux: "",
     darwin: "/opt/homebrew",
     // win32: "_prebuilt/fluidsynth-dev-win10-x64"
 }[platform];
-let fluidSearchpaths = [`${fpkg}/include`];
+
+let fluidSearchpaths = {
+    win32: [`${fpkg}/include`],
+    linux: [`/usr/include`],
+}[platform];
+
 let fluidLibs = 
 {
     win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
-    linux: [`${fpkg}/lib/libfluidsynth.so.3`],
+    linux: ["-lfluidsynth"],
     darwin: [],
 }[platform];
 
@@ -138,10 +143,19 @@ m.NewTask("installWebview", "install", {
 switch(platform)
 {
 case "linux":
+    {
+        let ts = jsmk.GetActiveToolset().GetHandle();
+        m.NewTask("installPlug", "install", {
+            inputs: t2.GetOutputs(), 
+            installext: ".clap", // <----- need separate rule for other files
+            installdir: "/"
+        });
+    }
+    break;
 case "win32":
     {
         let ts = jsmk.GetActiveToolset().GetHandle();
-        let dsoGlob = (platform == "linux") ? "lib/*so*" : "bin/*.dll";
+        let dsoGlob = "bin/*.dll";
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <--------- need separate rule for other files

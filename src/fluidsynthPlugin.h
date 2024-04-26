@@ -35,19 +35,8 @@ public:
 
     /* audio ports ------------------------------------------------------ */
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override 
-        { if(isInput) return 0; else return 1; }
-    bool audioPortsInfo(uint32_t index, bool isInput, clap_audio_port_info *info) const noexcept override 
-    {
-        if(isInput || index > 0) return false;
-        info->id = 0;
-        snprintf(info->name, sizeof(info->name), "%s", "Fluid outport");
-        info->channel_count = 2;
-        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
-        info->port_type = CLAP_PORT_STEREO;
-        info->in_place_pair = CLAP_INVALID_ID;
-        return true;
-    }
+    uint32_t audioPortsCount(bool isInput) const noexcept override ;
+    bool audioPortsInfo(uint32_t index, bool isInput, clap_audio_port_info *info) const noexcept override;
 
     /* note ports ---------------------------------------------------------- */
     bool implementsNotePorts() const noexcept override { return true; }

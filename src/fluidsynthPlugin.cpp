@@ -100,6 +100,31 @@ FluidsynthPlugin::init() noexcept
     return true;
 }
 
+uint32_t
+FluidsynthPlugin::audioPortsCount(bool isInput) const noexcept
+{ 
+    if(isInput) 
+        return 0; 
+    else 
+        return 1; 
+}
+
+bool 
+FluidsynthPlugin::audioPortsInfo(uint32_t index, bool isInput, 
+        clap_audio_port_info *info) const noexcept
+{
+    if(isInput || index > 0) return false;
+    info->id = 0;
+    snprintf(info->name, sizeof(info->name), "%s", "Fluid outport");
+    info->channel_count = 2;
+    info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+    info->port_type = CLAP_PORT_STEREO;
+    info->in_place_pair = CLAP_INVALID_ID;
+    if(m_verbosity > 0)
+        std::cerr << "audioPortsInfo\n";
+    return true;
+}
+
 bool 
 FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount, 
                     uint32_t maxFrameCount) noexcept
@@ -386,19 +411,23 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
 void 
 FluidsynthPlugin::reset() noexcept 
 {
-    std::cerr << "fluid reset\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid reset\n";
 }
 
 void 
 FluidsynthPlugin::onMainThread() noexcept
 {
-    std::cerr << "on main thread\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid on main thread\n";
 }
 
 const void *
 FluidsynthPlugin::extension(const char *id) noexcept
 {
-    // last-case handler for extensions
+    // last-chance handler for extensions
+    if(m_verbosity > 0)
+        std::cerr << "fluid extension " << id << "\n";
     return nullptr;
 }
 
@@ -882,10 +911,9 @@ FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept
     // stash the current soundfont path, gain and 16 prog/bank values
     // \n separates the 18 values.
 
-    uint16_t vers = k_newStateVersion;
-    
-    std::stringstream sstr;
+    // uint16_t vers = k_newStateVersion;
 
+    std::stringstream sstr;
     sstr << "{\"$schema\": \"fluidsynth.clap/v1\", "
          << "\"sf\": \"" << m_sfontReq << "\", "
          << "\"params\": {";

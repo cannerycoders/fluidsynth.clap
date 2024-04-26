@@ -1,6 +1,6 @@
 #include "fluidsynthPlugin.h"
 #include <clap/clap.h>
-#include <clap/factory/draft/preset-discovery.h>
+#include <clap/factory/preset-discovery.h>
 
 #include <string>
 #include <cassert>
