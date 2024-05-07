@@ -65,7 +65,8 @@ let fpkg = {
 
 let fluidSearchpaths = {
     win32: [`${fpkg}/include`],
-    linux: [`/usr/include`],
+    linux: ["/usr/include"],
+    darwin: [`${fpkg}/include`]
 }[platform];
 
 let fluidLibs = 
