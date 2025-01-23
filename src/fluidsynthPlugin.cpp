@@ -64,6 +64,20 @@ FluidsynthPlugin::FluidsynthPlugin(
     m_pluginPresetDirs.push_back(std::filesystem::path("/usr/local/share/sounds/sf2"));
     m_pluginPresetDirs.push_back(std::filesystem::path(home) / "Documents/sounds/sf2");
     #endif
+    char const *debug = getenv("FLUIDSYNTH_CLAP_DEBUG");
+    if(debug)
+        m_verbosity = atoi(debug);
+    else
+        m_verbosity = 0;
+    
+    // following used by eg Hz so it can ship a default soundfont.
+    char const *fallback = getenv("SOUNDFONT_FALLBACK_DIR");
+    if(fallback)
+    {
+        // std::cerr << "FluidSynth using environment fallback: " << fallback << "\n";
+        m_pluginPresetDirs.push_back(std::filesystem::path(fallback));
+    }
+
     m_sfontReq = "default.sf2";
     for(auto x : m_pluginPresetDirs)
     {
@@ -71,12 +85,6 @@ FluidsynthPlugin::FluidsynthPlugin(
         if(std::filesystem::exists(m_sfontPath))
             break;
     }
-    char const *debug = getenv("FLUIDSYNTH_CLAP_DEBUG");
-    if(debug)
-        m_verbosity = atoi(debug);
-    else
-        m_verbosity = 0;
-
 }
 
 FluidsynthPlugin::~FluidsynthPlugin()

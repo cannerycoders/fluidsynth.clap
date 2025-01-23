@@ -25,6 +25,7 @@ let pkgj = jsmk.file.read(jsmk.path.join(Project.ProjectDir, "package.json"));
 let pkg = JSON.parse(pkgj);
 let appName = pkg.label;
 let appVers = pkg.version;
+let tsName = jsmk.GetActiveToolset().Name;
 
 Project.EstablishDomain(appName, /(vs|gcc|clang)/,
 {
@@ -54,10 +55,16 @@ Project.Define({
 }[process.platform]);
 
 let platform = process.platform;
+let sfInstallDir = null;
+if(Project.GetBuildVar("BUILDCLIENT") == "Hz")
+{
+    Project.SetBuildVar("InstallDir", Project.GetBuildVar("PLUGIN_INSTALL"));
+    sfInstallDir = Project.GetBuildVar("SOUNDFONT_INSTALL");
+}
 let installRoot = Project.EvaluateBuildVar("InstallDir");
 
 let fpkg = {
-    win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
+    win32: "_prebuilt/fluidsynth-2.4.2-win10-x64",
     linux: "",
     darwin: "/opt/homebrew",
     // win32: "_prebuilt/fluidsynth-dev-win10-x64"
@@ -90,7 +97,12 @@ let guiLibs =
         "ole32.lib",
         "user32.lib",
     ],
-}[platform];
+}[`${platform}`];
+
+if(platform == "win32" && tsName == "clang")
+{
+    guiLibs = guiLibs.map(v => `-l${jsmk.path.basename(v)}`);
+}
 
 if(platform == "darwin") // see build/*/notes.md
 {
@@ -116,6 +128,8 @@ let t1 = m.NewTask("compile", "cpp->o",
         `clap-helpers/include`,
         ...fluidSearchpaths,
         ".", // for choc
+        `../clap/include`,
+        `../clap-helpers/include`,
     ],
 });
 
@@ -172,12 +186,19 @@ case "win32":
             inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
             installdir: "etc",
         });
-        /* finally, we zip ------------------------------- */
-        let zipfile = `${appName}.${ts}.zip`;
-        m.NewTask("fluidsynthPackage", "packagescript", {
-            ARGUMENTS: ["build/zipdir.js", installRoot,
-                jsmk.path.join(installRoot, "..", zipfile)]
-        });
+        if(Project.GetBuildVar("BUILDCLIENT") != "Hz")
+        {
+            /* finally, we zip (during package) -------------- */
+            let zipfile = `${appName}.${ts}.zip`;
+            m.NewTask("fluidsynthPackage", "packagescript", {
+                ARGUMENTS: ["build/zipdir.js", installRoot,
+                    jsmk.path.join(installRoot, "..", zipfile)]
+            });
+        }
+        else
+        {
+            jsmk.NOTICE("Building fluidsynth for Hz");
+        }
     }
     break;
 case "darwin":
@@ -235,4 +256,12 @@ case "darwin":
         });
     }
     break;
+}
+
+if(sfInstallDir)
+{
+    m.NewTask("installSoundfont", "install", {
+        inputs: Project.Glob("sf2/*"),
+        installdir: sfInstallDir
+    });
 }
