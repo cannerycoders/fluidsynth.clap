@@ -7,3 +7,5 @@ generally useful outside the Hz context.
 ### Built Notes
 
 * need to create and populate _prebuilt (depends on platform)
+* need to ensure that sf2/default.sf2 is present.
+  here's one source: https://keymusician01.s3.amazonaws.com/FluidR3_GM.zip.
