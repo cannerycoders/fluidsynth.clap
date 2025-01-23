@@ -57,7 +57,7 @@ let platform = process.platform;
 let installRoot = Project.EvaluateBuildVar("InstallDir");
 
 let fpkg = {
-    win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
+    win32: "_prebuilt/fluidsynth-2.4.2-win10-x64",
     linux: "",
     darwin: "/opt/homebrew",
     // win32: "_prebuilt/fluidsynth-dev-win10-x64"

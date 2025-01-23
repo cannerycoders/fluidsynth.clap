@@ -166,7 +166,7 @@ std::vector<std::string> split_RSJ_array (const std::string& str) { // TODO: Mak
             // single-line commenst
             if (str.compare (a, RSJlinecommentstart.length(), RSJlinecommentstart) == 0) {
                 // ignore until end of line
-                unsigned newline_pos = str.find ("\n", a);
+                auto newline_pos = str.find ("\n", a);
                 if (newline_pos == std::string::npos)
                     newline_pos = str.find ("\r", a);
                 
@@ -600,7 +600,7 @@ void RSJresource::fast_parse (std::string* str_p, bool copy_string, int max_dept
             // single-line commenst
             if (str.compare (a, RSJlinecommentstart.length(), RSJlinecommentstart) == 0) {
                 // ignore until end of line
-                unsigned newline_pos = str.find ("\n", a);
+                auto newline_pos = str.find ("\n", a);
                 if (newline_pos == std::string::npos)
                     newline_pos = str.find ("\r", a);
                 
