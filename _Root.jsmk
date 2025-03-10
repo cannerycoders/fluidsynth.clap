@@ -1,4 +1,13 @@
 /**
+ * 3/25 summary
+ *   - this project and _LibFluidSynth.jsmk have vestigial
+ *     details about building fluidsynth from src.
+ *   - windows relies on _prebuilt libraries from fluidsynth.org and github
+ *   - mac relied on homebrew to deliver libfluidsynth.a
+ *     but that brings in readline and 
+ *   - linux is "up-in-the-air": could simply require apt-get install unless
+ *     we need the latest and greatest builds.
+ *
  * Our clap plugin is a single dso/dll that has dependencies on one or more
  * other dsos.  Our plugin package combines these all into a platform-specifi
  * subdirectory structure.
@@ -7,7 +16,8 @@
  *     FluidSynth.clap/  <-- a directory
  *          FluidSynth.clap <--- the real clap plugin
  *          libfluidsynth-3.dll <-- the real fluidsynth
- *          libglib-2.0-0.dll <-- example of libfluidsynth-3 dependency
+ *          --- libfluidsysnth dependencies: 
+ *              DSOUND.dll, ... sndfile.dll, etc
  *          ....
  *          README.md, LICENSE, etc
  *  MacOS:
@@ -60,32 +70,46 @@ if(Project.GetBuildVar("BUILDCLIENT") == "Hz")
 {
     Project.SetBuildVar("InstallDir", Project.GetBuildVar("PLUGIN_INSTALL"));
     sfInstallDir = Project.GetBuildVar("SOUNDFONT_INSTALL");
-}
+};
 let installRoot = Project.EvaluateBuildVar("InstallDir");
+
 
 let fpkg = {
     win32: "_prebuilt/fluidsynth-2.4.2-win10-x64",
-    linux: "",
     darwin: "/opt/homebrew",
-    // win32: "_prebuilt/fluidsynth-dev-win10-x64"
+    linux: "",
 }[platform];
+let hcel = `${fpkg}/Cellar`;
 
 let fluidSearchpaths = {
     win32: [`${fpkg}/include`],
-    linux: ["/usr/include"],
-    darwin: [`${fpkg}/include`]
+    darwin: [`${fpkg}/include`],
+    linuc: ["/usr/include"],
 }[platform];
 
 let fluidLibs = 
 {
     win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
+    darwin: [`${fpkg}/lib/libfluidsynth.a`,
+           `${fpkg}/lib/libportaudio.a`,
+           `${fpkg}/lib/libsndfile.a`,
+           `${fpkg}/lib/libvorbis.a`,
+           `${fpkg}/lib/libvorbisenc.a`,
+           `${fpkg}/lib/libvorbisfile.a`,
+           `${fpkg}/lib/libogg.a`,
+           `${fpkg}/lib/libopus.a`,
+           `${fpkg}/lib/libmp3lame.a`,
+           `${fpkg}/lib/libmpg123.a`,
+           `${fpkg}/lib/libflac.a`,
+           `${hcel}/readline/8.2.13/lib/libreadline.a`,
+           `${hcel}/readline/8.2.13/lib/libhistory.a`,
+           `${hcel}/ncurses/6.5/lib/libncurses.a`,
+           `${fpkg}/lib/libglib-2.0.a`,
+           `${fpkg}/lib/libgthread-2.0.a`,
+           `${fpkg}/lib/libintl.a`,
+           "-liconv",
+           ],
     linux: ["-lfluidsynth"],
-    darwin: [],
-}[platform];
-
-let fluidModules =
-{
-    darwin: ["libfluidsynth"]
 }[platform];
 
 let guiLibs =
@@ -97,17 +121,23 @@ let guiLibs =
         "ole32.lib",
         "user32.lib",
     ],
-}[`${platform}`];
+}[platform];
+
+let fluidModules =
+{
+    // darwin: ["libfluidsynth"]
+}[platform];
+
 
 if(platform == "win32" && tsName == "clang")
 {
     guiLibs = guiLibs.map(v => `-l${jsmk.path.basename(v)}`);
 }
 
-if(platform == "darwin") // see build/*/notes.md
+if(false && platform == "darwin") // see build/*/notes.md
 {
     Project.NewProject("libfluidsynthProj", {
-        ProjectDir: "fluidsynth/src",
+        ProjectDir: "src",
         ProjectFilePath: "_LibFluidSynth.jsmk",
     }).EstablishBarrier("after");
 }
@@ -142,12 +172,20 @@ let linkflags = {
     linux: ["-Wl,-rpath=$ORIGIN"]
 }[platform];
 
+let frameworks = {
+  darwin: ["AudioUnit", "AudioToolbox", "CoreAudio", "CoreMIDI", "CoreFoundation", "IOKit",
+           "Carbon", "AppKit", "Foundation"],
+  win32: [],
+  linux: [],
+}[platform];
+
 let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs,
     modules: fluidModules,
     flags: linkflags,
     libs: guiLibs,
+    frameworks
 });
 
 m.NewTask("installWebview", "install", {
