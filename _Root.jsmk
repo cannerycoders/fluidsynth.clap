@@ -73,13 +73,13 @@ if(Project.GetBuildVar("BUILDCLIENT") == "Hz")
 };
 let installRoot = Project.EvaluateBuildVar("InstallDir");
 
-
-let fpkg = {
-    win32: "_prebuilt/fluidsynth-2.4.2-win10-x64",
-    darwin: "/opt/homebrew",
-    linux: "",
+let hroot = "/opt/homebrew";
+let hcel = `${hroot}/Cellar`;
+let [fpkg, flib] = {
+    win32: ["_prebuilt/fluidsynth-2.4.2-win10-x64", "_prebuilt/fluidsynth-2.4.2-win10-x64/lib"],
+    darwin: [hroot, `${hroot}/lib`],
+    linux: ["", ""],
 }[platform];
-let hcel = `${fpkg}/Cellar`;
 
 let fluidSearchpaths = {
     win32: [`${fpkg}/include`],
@@ -89,27 +89,39 @@ let fluidSearchpaths = {
 
 let fluidLibs = 
 {
-    win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
-    darwin: [`${fpkg}/lib/libfluidsynth.a`,
-           `${fpkg}/lib/libportaudio.a`,
-           `${fpkg}/lib/libsndfile.a`,
-           `${fpkg}/lib/libvorbis.a`,
-           `${fpkg}/lib/libvorbisenc.a`,
-           `${fpkg}/lib/libvorbisfile.a`,
-           `${fpkg}/lib/libogg.a`,
-           `${fpkg}/lib/libopus.a`,
-           `${fpkg}/lib/libmp3lame.a`,
-           `${fpkg}/lib/libmpg123.a`,
-           `${fpkg}/lib/libflac.a`,
-           `${hcel}/readline/8.2.13/lib/libreadline.a`,
-           `${hcel}/readline/8.2.13/lib/libhistory.a`,
-           `${hcel}/ncurses/6.5/lib/libncurses.a`,
-           `${fpkg}/lib/libglib-2.0.a`,
-           `${fpkg}/lib/libgthread-2.0.a`,
-           `${fpkg}/lib/libintl.a`,
-           "-liconv",
-           ],
-    linux: ["-lfluidsynth"],
+    win32: [`${flib}/lib/libfluidsynth.dll.a`],
+    darwin: [
+         `${flib}/libfluidsynth.a`,
+        `${flib}/libportaudio.a`,
+        `${flib}/libsndfile.a`,
+        `${flib}/libvorbis.a`, 
+        `${flib}/libvorbisenc.a`, 
+        `${flib}/libogg.a`, 
+        `${flib}/libopus.a`, 
+        `${flib}/libmp3lame.a`, 
+        `${flib}/libmpg123.a`, 
+        `${flib}/libflac.a`, 
+        `${flib}/libglib-2.0.a`,
+        `${flib}/libintl.a`,
+        `${hcel}/readline/8.2.13/lib/libreadline.a`,
+        `${hcel}/ncurses/6.5/lib/libncurses.a`,
+        "-liconv"
+        ],
+    linux: [], // WIP
+}[platform];
+
+let fluidFrameworks = {
+    win32: [], 
+    darwin: [
+        "AudioUnit", "CoreAudio", "AudioToolbox", "CoreMIDI", "CoreFoundation", "IOKit",
+        "Carbon", "AppKit", "Foundation"
+    ],
+    linux: [], 
+}[platform];
+
+let fluidModules =
+{
+    darwin: [""]
 }[platform];
 
 let guiLibs =
@@ -123,24 +135,13 @@ let guiLibs =
     ],
 }[platform];
 
-let fluidModules =
-{
-    // darwin: ["libfluidsynth"]
-}[platform];
-
-
 if(platform == "win32" && tsName == "clang")
 {
     guiLibs = guiLibs.map(v => `-l${jsmk.path.basename(v)}`);
 }
 
-if(false && platform == "darwin") // see build/*/notes.md
-{
-    Project.NewProject("libfluidsynthProj", {
-        ProjectDir: "src",
-        ProjectFilePath: "_LibFluidSynth.jsmk",
-    }).EstablishBarrier("after");
-}
+// this may do nothing.. (ie: see notes therein).
+Project.NewProject("libfluidsynth").EstablishBarrier("after");
 
 let m = Project.NewModule(appName);
 let defs = {
@@ -167,7 +168,7 @@ let t1 = m.NewTask("compile", "cpp->o",
 // NB: name of task is depended upon during install+renaming.
 // NB2: the name of the install dir is governed by package.json (see top)
 let linkflags = {
-    darwin: [],
+    darwin: [["-L",`${fpkg}/lib`]], // -L only works for -lmylib
     win32: [],
     linux: ["-Wl,-rpath=$ORIGIN"]
 }[platform];
@@ -182,10 +183,10 @@ let frameworks = {
 let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs,
-    modules: fluidModules,
+    // modules: fluidModules,
     flags: linkflags,
     libs: guiLibs,
-    frameworks
+    frameworks: fluidFrameworks,
 });
 
 m.NewTask("installWebview", "install", {
