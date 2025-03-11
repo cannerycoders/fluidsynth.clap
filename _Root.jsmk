@@ -89,7 +89,7 @@ let fluidSearchpaths = {
 
 let fluidLibs = 
 {
-    win32: [`${flib}/lib/libfluidsynth.dll.a`],
+    win32: [`${flib}/libfluidsynth.dll.a`],
     darwin: [
          `${flib}/libfluidsynth.a`,
         `${flib}/libportaudio.a`,
