@@ -70,6 +70,7 @@ let hzBuild = Project.GetBuildVar("BUILDCLIENT") == "Hz";
 
 if(hzBuild)
 {
+    // this would point to eg: App-1.0 or App-1.0/App.app
     Project.SetBuildVar("InstallDir", Project.GetBuildVar("PLUGIN_INSTALL"));
     sfInstallDir = Project.GetBuildVar("SOUNDFONT_INSTALL");
 };
@@ -187,9 +188,22 @@ let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     frameworks: fluidFrameworks,
 });
 
-m.NewTask("installWebview", "install", {
+let installPrefix = "/";
+// if(hzBuild)
+// {
+//     installPrefix = {
+//         "win32": "",
+//         "linux": "",
+//         "darwin": "FluidSynth.clap/",
+//     }[platform];
+// }
+
+m.NewTask("installWebview", "install", 
+{
     inputs: Project.Glob("src/webview/*"),
-    installdir: platform == "darwin" ? "Contents/Resources/webview" : "webview"
+    installdir: platform == "darwin" ? 
+                `${installPrefix}Contents/Resources/webview` : 
+                `${installPrefix}webview`
 });
 
 switch(platform)
@@ -200,7 +214,7 @@ case "linux":
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <----- need separate rule for other files
-            installdir: "/"
+            installdir: installPrefix
         });
     }
     break;
@@ -211,7 +225,7 @@ case "win32":
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <--------- need separate rule for other files
-            installdir: "/"
+            installdir: installPrefix
         });
         /* windows dlls can be downloaded from fluidsynth github */
         m.NewTask("installDLLs", "install", {
@@ -223,7 +237,7 @@ case "win32":
             inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
             installdir: "etc",
         });
-        if(hzBuild)
+        if(!hzBuild)
         {
             /* finally, we zip (during package) -------------- */
             let zipfile = `${appName}.${ts}.zip`;
@@ -242,42 +256,49 @@ case "darwin":
     // We only perform copy/fixup of dlls during the packaging phase.
     // This is because the stripping overlaps with the required signing.
     {
-        let binDir = "Contents/MacOS";
-        let resourcesDir = "Contents/Resources";
-        m.NewTask("installPlug", "install", {
-            inputs: t2.GetOutputs(), 
-            installext: "", // <--------- need separate rule for other files
-            installdir: binDir,
-        });
-        /* no frameworks atm, statically linked 
-        m.NewTask("packageDLLs", "installscript", {
-            ARGUMENTS: ["build/fixupDLLs.js",
-                 jsmk.path.join(installRoot, frameworksDir), 
-                 ...tcpy.GetOutputs()
-                ]
-            })
-        */
-        m.NewTask("installPkg", "install", {
-            inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
-            installdir: "Contents"
-        });
-        m.NewTask("installLegal", "install", {
-            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses", "build/darwin/clap.icns"],
-            installdir: resourcesDir,
-        });
+        let binDir = `${installPrefix}Contents/MacOS`;
+        let resourcesDir = `${installPrefix}Contents/Resources`;
         if(hzBuild)
         {
-            // copy to target, let client handle notary + pkg
+            // copy to target, let client handle fixupDLL, notarizing, packaging
+            m.NewTask("installPlug", "install", {
+                inputs: t2.GetOutputs(), 
+                installext: "", // <--------- need separate rule for other files
+                installdir: binDir,
+            });
         }
         else
         {
+            let binDir = "Contents/MacOS";
+            let resourcesDir = "Contents/Resources";
+            m.NewTask("installPlug", "install", {
+                inputs: t2.GetOutputs(), 
+                installext: "", // <--------- need separate rule for other files
+                installdir: binDir,
+            });
+            /* no frameworks atm, statically linked 
+            m.NewTask("packageDLLs", "installscript", {
+                ARGUMENTS: ["build/fixupDLLs.js",
+                    jsmk.path.join(installRoot, frameworksDir), 
+                    ...tcpy.GetOutputs()
+                    ]
+                })
+            */
+            m.NewTask("installPkg", "install", {
+                inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
+                installdir: `${installPrefix}Contents`
+            });
+            m.NewTask("installLegal", "install", {
+                inputs: ["README.md", "LICENSE", "BUILD.json", "licenses", "build/darwin/clap.icns"],
+                installdir: resourcesDir,
+            });
             // https://developer.apple.com/forums/thread/130855
             //  -- only sign binaries
             //  -- only apply entitlements to apps
             m.NewTask("osxsign", "packagescript",
             {
                 ARGUMENTS: [
-                    "build/darwin/osxsign.js", installRoot,
+                    "build/darwin/osxsign.js", installPrefix
                 ]
             });
 
@@ -294,7 +315,7 @@ case "darwin":
             m.NewTask("osxnotarize", "repositscript",
             {
                 ARGUMENTS: [
-                    "build/darwin/osxnotarize.js", installRoot+dmgExt
+                    "build/darwin/osxnotarize.js", installPrefix+dmgExt
                 ]
             });
         }
