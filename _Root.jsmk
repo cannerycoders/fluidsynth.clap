@@ -66,12 +66,17 @@ Project.Define({
 
 let platform = process.platform;
 let sfInstallDir = null;
-if(Project.GetBuildVar("BUILDCLIENT") == "Hz")
+let hzBuild = Project.GetBuildVar("BUILDCLIENT") == "Hz";
+
+if(hzBuild)
 {
     Project.SetBuildVar("InstallDir", Project.GetBuildVar("PLUGIN_INSTALL"));
     sfInstallDir = Project.GetBuildVar("SOUNDFONT_INSTALL");
 };
 let installRoot = Project.EvaluateBuildVar("InstallDir");
+
+if(platform == "darwin")
+    console.log("fluidsynth MacOS installRoot: " + installRoot);
 
 let hroot = "/opt/homebrew";
 let hcel = `${hroot}/Cellar`;
@@ -119,11 +124,6 @@ let fluidFrameworks = {
     linux: [], 
 }[platform];
 
-let fluidModules =
-{
-    darwin: [""]
-}[platform];
-
 let guiLibs =
 {
     win32: [
@@ -164,7 +164,6 @@ let t1 = m.NewTask("compile", "cpp->o",
     ],
 });
 
-// jsmk.WARNING(`fluidModules: ${fluidModules} ${platform}`);
 // NB: name of task is depended upon during install+renaming.
 // NB2: the name of the install dir is governed by package.json (see top)
 let linkflags = {
@@ -183,7 +182,6 @@ let frameworks = {
 let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs,
-    // modules: fluidModules,
     flags: linkflags,
     libs: guiLibs,
     frameworks: fluidFrameworks,
@@ -225,7 +223,7 @@ case "win32":
             inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
             installdir: "etc",
         });
-        if(Project.GetBuildVar("BUILDCLIENT") != "Hz")
+        if(hzBuild)
         {
             /* finally, we zip (during package) -------------- */
             let zipfile = `${appName}.${ts}.zip`;
@@ -246,7 +244,7 @@ case "darwin":
     {
         let binDir = "Contents/MacOS";
         let resourcesDir = "Contents/Resources";
-        let tcpy = m.NewTask("installPlug", "install", {
+        m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: "", // <--------- need separate rule for other files
             installdir: binDir,
@@ -267,32 +265,39 @@ case "darwin":
             inputs: ["README.md", "LICENSE", "BUILD.json", "licenses", "build/darwin/clap.icns"],
             installdir: resourcesDir,
         });
-        // https://developer.apple.com/forums/thread/130855
-        //  -- only sign binaries
-        //  -- only apply entitlements to apps
-        m.NewTask("osxsign", "packagescript",
+        if(hzBuild)
         {
-            ARGUMENTS: [
-                "build/darwin/osxsign.js", installRoot,
-            ]
-        });
+            // copy to target, let client handle notary + pkg
+        }
+        else
+        {
+            // https://developer.apple.com/forums/thread/130855
+            //  -- only sign binaries
+            //  -- only apply entitlements to apps
+            m.NewTask("osxsign", "packagescript",
+            {
+                ARGUMENTS: [
+                    "build/darwin/osxsign.js", installRoot,
+                ]
+            });
 
-        let ts = jsmk.GetActiveToolset().GetHandle();
-        let dmgExt = `.${ts}.dmg`;
-        m.NewTask("osxdmg", "packagescript", 
-        {
-            ARGUMENTS: [
-                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", 
-                installRoot+dmgExt
-            ]
-        });
-        
-        m.NewTask("osxnotarize", "repositscript",
-        {
-            ARGUMENTS: [
-                "build/darwin/osxnotarize.js", installRoot+dmgExt
-            ]
-        });
+            let ts = jsmk.GetActiveToolset().GetHandle();
+            let dmgExt = `.${ts}.dmg`;
+            m.NewTask("osxdmg", "packagescript", 
+            {
+                ARGUMENTS: [
+                    "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", 
+                    installRoot+dmgExt
+                ]
+            });
+            
+            m.NewTask("osxnotarize", "repositscript",
+            {
+                ARGUMENTS: [
+                    "build/darwin/osxnotarize.js", installRoot+dmgExt
+                ]
+            });
+        }
     }
     break;
 }

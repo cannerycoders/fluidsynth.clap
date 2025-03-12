@@ -3,9 +3,8 @@
 ## dyld headeaches
 
 Conclusion is to statically link fluid (into our open-source plugin).
-Homebrew produces static libs for glib, etc, but not sndfile, etc.
-
-So we diable both readline and sndfile for our plugin.
+Homebrew produces static libs for glib, etc, now including sndfile, etc.
+See fluidLibs in _Root.jsmk.
 
 ## Signing and Notarization
 
