@@ -80,9 +80,10 @@ if(platform == "darwin")
     console.log("fluidsynth MacOS installRoot: " + installRoot);
 
 let hroot = "/opt/homebrew";
+let fluidVers = "2.4.2";
 let hcel = `${hroot}/Cellar`;
 let [fpkg, flib] = {
-    win32: ["_prebuilt/fluidsynth-2.4.2-win10-x64", "_prebuilt/fluidsynth-2.4.2-win10-x64/lib"],
+    win32: [`_prebuilt/fluidsynth-${fluidVers}-win10-x64`, `_prebuilt/fluidsynth-${fluidVers}-win10-x64/lib`],
     darwin: [hroot, `${hroot}/lib`],
     linux: ["", ""],
 }[platform];
@@ -186,6 +187,7 @@ let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     flags: linkflags,
     libs: guiLibs,
     frameworks: fluidFrameworks,
+    buildvars: {VERSION: fluidVers}
 });
 
 let installPrefix = "/";
@@ -225,7 +227,7 @@ case "win32":
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <--------- need separate rule for other files
-            installdir: installPrefix
+            installdir: installPrefix,
         });
         /* windows dlls can be downloaded from fluidsynth github */
         m.NewTask("installDLLs", "install", {
