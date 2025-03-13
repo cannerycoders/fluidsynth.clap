@@ -1,6 +1,6 @@
-// Currently our job is to populate fixup packaged dlls so they they refer
-// to one another via relative paths.   On MacOS, security policies require
-// that dylibs be located in Frameworks and signed.
+// Currently our job is to fixup packaged dlls so they they refer
+// to one another via relative paths.   On MacOS, security policies
+// require that dylibs be located in Frameworks and signed.
 //
 // https://stackoverflow.com/questions/49223687/my-target-is-dynamically-linked-against-libraries-from-brew-how-to-bundle-for-d
 //

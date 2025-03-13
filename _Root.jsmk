@@ -276,7 +276,9 @@ case "darwin":
                 installext: "", // <--------- need separate rule for other files
                 installdir: binDir,
             });
-            /* no frameworks atm, statically linked 
+            /* no frameworks atm, statically linked  
+             * still nice to fixup our dll's rpath.
+             */
             m.NewTask("packageDLLs", "installscript", {
                 ARGUMENTS: ["build/fixupDLLs.js",
                     jsmk.path.join(installRoot, frameworksDir), 
