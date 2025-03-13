@@ -280,7 +280,6 @@ case "darwin":
             });
             /* no frameworks atm, statically linked  
              * still nice to fixup our dll's rpath.
-             */
             m.NewTask("packageDLLs", "installscript", {
                 ARGUMENTS: ["build/fixupDLLs.js",
                     jsmk.path.join(installRoot, frameworksDir), 
