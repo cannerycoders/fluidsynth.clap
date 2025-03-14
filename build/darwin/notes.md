@@ -4,9 +4,14 @@
 
 Conclusion is to statically link fluid (into our open-source plugin).
 Homebrew produces static libs for glib, etc, now including sndfile, etc.
-See fluidLibs in _Root.jsmk.
+See fluidLibs in _Root.jsmk.  FluidSynth.dylib doesn't require that
+we store it in Frameworks, since it's explicitly, not dynamically loaded.
 
 ## Signing and Notarization
+
+* to sign and notarize, the underlying os tools require access to the
+  keychain. `security find-identity -v -p codesigning` or
+    `security find-identity -v`
 
 https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci
 
