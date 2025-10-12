@@ -1,15 +1,23 @@
+// currently we prefer to use the system or prebuilt libraries.
+// on windows these are downloaded from github and placed into ../_prebuilt.
+// On MacOS, they are built/maintained by homebrew.
+// On Linux apt-get install fluidsynth-dev (apprOx)
+// Below are a bunch of vestigial / reference build chunks
+// for now we have nowthing to do
+const compileLib = false;
+if(compileLib) 
+{
 // To avoid DLL hell, we compile libfluidsynth.a (static library)
-// We rely on homebrew oo deliver static libs for all dependencies 
-// (glib, orbis, etc).
+// On MacOS, We rely on homebrew oo deliver static libs for all 
+// dependencies (glib, orbis, etc). as well as libfluidsynth.a.
 // 
 // https://github.com/FluidSynth/fluidsynth/wiki/BuildingWithCMake
 //
 // pkg-config --cflags fluidsynth
 //  -I/opt/homebrew/Cellar/readline/8.2.1/include \
-//  -I/opt/homebrew/Cellar/fluid-synth/2.3.3/include \
+//  -I/opt/homebrew/Cellar/fluid-synth/2.4.3/include \
 //  -I/opt/homebrew/Cellar/glib/2.76.3/include \
 //  -I/opt/homebrew/Cellar/glib/2.76.3/include/glib-2.0 \
-//  -I/opt/homebrew/Cellar/glib/2.76.3/lib/glib-2.0/include \
 //  -I/opt/homebrew/opt/gettext/include \
 //  -I/opt/homebrew/Cellar/pcre2/10.42/include \
 //  -I/opt/homebrew/Cellar/libsndfile/1.2.0_1/include \
@@ -21,13 +29,25 @@
 //  -I/opt/homebrew/Cellar/portaudio/19.7.0/include
 // 
 // pkg-config --libs fluidsynth
-// -L/opt/homebrew/Cellar/fluid-synth/2.3.3/lib -lfluidsynth
+// -L/opt/homebrew/Cellar/fluid-synth/2.4.3/lib -lfluidsynth
 
 let m = Project.NewModule("libfluidsynth");
-let inc = "/usr/include";
-let lib = "/usr/lib/x86_64-linux-gnu"; // -L
-let libinc = "/usr/lib"
-let platformSource;
+let inc;
+let lib;
+let libinc;
+let platformSrc;
+if(process.platoform == "linux")
+{
+    inc = "/usr/include";
+    lib = "/usr/lib/x86_64-linux-gnu"; // -L
+    ilibinc = "/usr/lib"
+    platformSrc = [
+        "drivers/fluid_pulse.c",
+        "drivers/fluid_alsa.c",
+        "drivers/fluid_jack.c",
+    ];
+}
+else
 if(process.platform == "darwin")
 {
     let hbcel = "/opt/homebrew/Cellar";
@@ -39,7 +59,7 @@ if(process.platform == "darwin")
     /*
      // see build/src/CMakefiles/libfluidsynth-OBJ.dir/flags.make
     `${hbcel}/readline/8.2.1/include`,
-    `${hbcel}/fluid-synth/2.3.3/include`,
+    `${hbcel}/fluid-synth/2.4.3/include`,
     `${hbcel}/glib/2.76.3/include`,
     `${hbcel}/glib/2.76.3/include/glib-2.0`,
     `${hbcel}/glib/2.76.3/lib/glib-2.0/include`,
@@ -76,14 +96,8 @@ if(process.platform == "darwin")
         "drivers/fluid_aufile.c",
     ];
 }
-else
-{
-    platformSrc = [
-        "drivers/fluid_pulse.c",
-        "drivers/fluid_alsa.c",
-        "drivers/fluid_jack.c",
-    ];
-}
+
+
 let searchpaths = [
     `../../build/${process.platform}`, // for config.h
     "../../build/fluid", // for pre-built (buildtime) tables
@@ -147,8 +161,7 @@ let t1 = m.NewTask("compile", "c->o", {
         ...platformSrc,
     ],
     searchpaths,
-});
-
+    });
 let t2 = m.NewTask("compile", "cpp->o", {
     inputs: [
         "midi/fluid_seqbind_notes.cpp",
@@ -216,3 +229,4 @@ let t5 = m2.NewTask("example", "cpp.o->exe", {
    flags: linkflags,
    modules: ["libfluidsynth"] // above
 });
+}

@@ -5,6 +5,7 @@
 #include <clap/helpers/plugin.hh>
 #include <clap/helpers/misbehaviour-handler.hh>
 #include <clap/helpers/checking-level.hh>
+
 #include <string>
 #include <filesystem> // c++17 dependency
 #include <map>
@@ -34,19 +35,8 @@ public:
 
     /* audio ports ------------------------------------------------------ */
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override 
-        { if(isInput) return 0; else return 1; }
-    bool audioPortsInfo(uint32_t index, bool isInput, clap_audio_port_info *info) const noexcept override 
-    {
-        if(isInput || index > 0) return false;
-        info->id = 0;
-        snprintf(info->name, sizeof(info->name), "%s", "Fluid outport");
-        info->channel_count = 2;
-        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
-        info->port_type = CLAP_PORT_STEREO;
-        info->in_place_pair = CLAP_INVALID_ID;
-        return true;
-    }
+    uint32_t audioPortsCount(bool isInput) const noexcept override ;
+    bool audioPortsInfo(uint32_t index, bool isInput, clap_audio_port_info *info) const noexcept override;
 
     /* note ports ---------------------------------------------------------- */
     bool implementsNotePorts() const noexcept override { return true; }
@@ -76,6 +66,8 @@ public:
     bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override;
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override;
 
+    int paramIndex(uint32_t paramId);
+
     /* -- presets ----------------------------------------------------- */
     bool implementsPresetLoad() const noexcept override { return true; }
     bool presetLoadFromLocation(uint32_t location_kind,
@@ -87,9 +79,34 @@ public:
     bool stateSave(const clap_ostream *stream) noexcept override; 
     bool stateLoad(const clap_istream *stream) noexcept override; 
 
+    /* -- gui ------------------------------------------------------- */
+    virtual bool implementsGui() const noexcept override 
+    { 
+        // std::cerr << "implements GUI!\n";
+        return true; 
+    }
+    virtual bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
+    virtual bool guiGetPreferredApi(const char **api, bool *is_floating) noexcept override;
+    virtual bool guiCreate(const char *api, bool isFloating) noexcept override; 
+    virtual void guiDestroy() noexcept override;
+    virtual bool guiSetScale(double scale) noexcept override;
+    virtual bool guiShow() noexcept override;
+    virtual bool guiHide() noexcept override;
+    virtual bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override;
+    virtual bool guiCanResize() const noexcept override;
+    virtual bool guiGetResizeHints(clap_gui_resize_hints_t *hints) noexcept override;
+    virtual bool guiAdjustSize(uint32_t *width, uint32_t *height) noexcept override;
+    virtual bool guiSetSize(uint32_t width, uint32_t height) noexcept override;
+    virtual void guiSuggestTitle(const char *title) noexcept override;
+    virtual bool guiSetParent(const clap_window *window) noexcept override;
+    virtual bool guiSetTransient(const clap_window *window) noexcept override;
+
 private:
     void processEvent(const clap_event_header_t *hdr);
     void setParamValue(int paramid, double value);
+    uint32_t m_guiSize[2];
+    void serializeVoiceNames(std::stringstream &);
+    std::string m_voices; // JSON string
 
 private:
     fluid_settings_t *m_settings;
@@ -98,6 +115,8 @@ private:
     int m_verbosity;
     std::filesystem::path m_pluginPath;
     std::vector<std::filesystem::path> m_pluginPresetDirs;
+
+    std::string m_sfontReq;
     std::filesystem::path m_sfontPath;
     mutable std::map<uint32_t, double> m_paramValues; // init at paramsInfo()
 
@@ -119,13 +138,12 @@ private:
         k_ChorusMod,  // sine or triangle
         k_indexedParamCount,
 
-        k_Prog0 = 32,   // programs associated with 16 midi channels
+        k_Prog0 = 32,   // 32-47: programs associated with 16 midi channels
 
-        k_Bank0 = 48,   // banks associated with 16 midi channels
+        k_Bank0 = 48,   // 48-63: banks associated with 16 midi channels
 
         k_numParams = k_indexedParamCount + 32
     };
     float m_gain = .2f;
-
     static clap_param_info s_fluidParams[];
 };

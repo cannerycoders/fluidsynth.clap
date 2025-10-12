@@ -1,11 +1,19 @@
 #include "fluidsynthPlugin.h"
 
+#ifdef _WIN32
+#pragma warning(disable: 4267) // size_t warnings
+#endif
+#include "RSJparser.tcc"
+#ifdef _WIN32
+#pragma warning(default: 4267) // size_t warnings
+#endif
+
 #include <clap/helpers/plugin.hxx>
 #include <clap/helpers/host-proxy.hxx>
 
 #include <iostream>
 
-static char const *s_features[] = 
+static char const *s_features[] =  // just for indexing, no functional value
 {
     CLAP_PLUGIN_FEATURE_INSTRUMENT, 
     CLAP_PLUGIN_FEATURE_STEREO, 
@@ -31,6 +39,7 @@ FluidsynthPlugin::FluidsynthPlugin(
         Plugin(&s_descriptor, host),
         m_settings(nullptr),
         m_synth(nullptr),
+        m_fontId(-1),
         m_pluginPath(pluginPath)
 {
     #ifdef _WIN32
@@ -55,16 +64,27 @@ FluidsynthPlugin::FluidsynthPlugin(
     m_pluginPresetDirs.push_back(std::filesystem::path("/usr/local/share/sounds/sf2"));
     m_pluginPresetDirs.push_back(std::filesystem::path(home) / "Documents/sounds/sf2");
     #endif
+    char const *debug = getenv("FLUIDSYNTH_CLAP_DEBUG");
+    if(debug)
+        m_verbosity = atoi(debug);
+    else
+        m_verbosity = 0;
+    
+    // following used by eg Hz so it can ship a default soundfont.
+    char const *fallback = getenv("SOUNDFONT_FALLBACK_DIR");
+    if(fallback)
+    {
+        // std::cerr << "FluidSynth using environment fallback: " << fallback << "\n";
+        m_pluginPresetDirs.push_back(std::filesystem::path(fallback));
+    }
+
+    m_sfontReq = "default.sf2";
     for(auto x : m_pluginPresetDirs)
     {
-        m_sfontPath = x / "default.sf2";
+        m_sfontPath = x / m_sfontReq;
         if(std::filesystem::exists(m_sfontPath))
             break;
     }
-    if(getenv("FLUIDSYNTH_CLAP_DEBUG"))
-        m_verbosity = 2;
-    else
-        m_verbosity = 0;
 }
 
 FluidsynthPlugin::~FluidsynthPlugin()
@@ -85,6 +105,31 @@ FluidsynthPlugin::init() noexcept
     // NB: this happens during dumpPlugs
     if(m_verbosity > 0)
         std::cerr << "fluid init\n";
+    return true;
+}
+
+uint32_t
+FluidsynthPlugin::audioPortsCount(bool isInput) const noexcept
+{ 
+    if(isInput) 
+        return 0; 
+    else 
+        return 1; 
+}
+
+bool 
+FluidsynthPlugin::audioPortsInfo(uint32_t index, bool isInput, 
+        clap_audio_port_info *info) const noexcept
+{
+    if(isInput || index > 0) return false;
+    info->id = 0;
+    snprintf(info->name, sizeof(info->name), "%s", "Fluid outport");
+    info->channel_count = 2;
+    info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+    info->port_type = CLAP_PORT_STEREO;
+    info->in_place_pair = CLAP_INVALID_ID;
+    if(m_verbosity > 0)
+        std::cerr << "audioPortsInfo\n";
     return true;
 }
 
@@ -114,7 +159,10 @@ FluidsynthPlugin::activate(double sampleRate, uint32_t minFrameCount,
                         m_sfontPath.generic_string().c_str(), 
                         1/*reset*/);
         if(m_verbosity > 0)
-            std::cerr << "fluid font " << m_sfontPath << " id:" << m_fontId << "\n";
+            std::cerr << "fluid font " << m_sfontReq << " id:" << m_fontId << "\n";
+        this->setParamValue(k_Gain, 1.0);
+
+        // send an activate message ? 
     }
 
     if(m_verbosity > 0)
@@ -221,14 +269,65 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_NOTE_CHOKE: 
             {
                 // const clap_event_note_t *ev = (const clap_event_note_t *)hdr;
-                std::cerr << "TODO: handle note choke\n";
+                std::cerr << "FluidSynth.clap TODO: handle note choke\n";
                 break;
             }
 
         case CLAP_EVENT_NOTE_EXPRESSION: 
             {
-                // const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
-                std::cerr << "TODO: handle note expression\n";
+                // For now we dump-down clap expressions and represent as MIDI.
+                const clap_event_note_expression_t *ev = (const clap_event_note_expression_t *)hdr;
+                int chan = ev->channel;
+                int key = ev->key;
+                double val = ev->value;
+                // port_index, note_id ignored by MIDI, 
+                switch(ev->expression_id)
+                {
+                case CLAP_NOTE_EXPRESSION_VOLUME: // 0+ - 4 (20 * log(x))
+                    val = val > 4 ? 4 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 7/*CC7*/, (int) ((val/4)*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_PAN: // 0-1
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 10/*CC10*/, (int) (val * 127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_TUNING: // relative tuning in semitone, from -120 to +120
+                    {
+                        // convert -2, 2 onto 0-16384
+                        int pitchbend;
+                        if(std::abs(val) < .0001)
+                            pitchbend = 8192;
+                        else
+                        {
+                            if(val > 2) val = 2;
+                            else if(val < -2) val = -2;
+                            pitchbend = (int) (((2 + val) / 4) * 16383);
+                        }
+                        // std::cerr << "FluidSynth.clap CLAP pitch bend " 
+                        //   << chan << " " << pitchbend << "\n";
+                        fluid_synth_pitch_bend(m_synth, chan, pitchbend);
+                    }
+                    break;
+                case CLAP_NOTE_EXPRESSION_VIBRATO:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 77/*cc77*/, (int)(val*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_EXPRESSION:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 11/*cc11*/, (int)(val*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_BRIGHTNESS:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_cc(m_synth, chan, 74/*cc74*/, (int)(val*127));
+                    break;
+                case CLAP_NOTE_EXPRESSION_PRESSURE:
+                    val = val > 1 ? 1 : val < 0 ? 0 : val;
+                    fluid_synth_key_pressure(m_synth, chan, key, (int)(val*127));
+                    break;
+                default:
+                    std::cerr << "FluidSynth.clap TODO: handle custom note expression\n";
+                    break;
+                }
                 break;
             }
 
@@ -243,14 +342,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_PARAM_MOD: 
             {
                 // const clap_event_param_mod_t *ev = (const clap_event_param_mod_t *)hdr;
-                std::cerr << "TODO: handle parameter modulation\n";
+                std::cerr << "FluidSynth.clap TODO: handle parameter modulation\n";
                 break;
             }
 
         case CLAP_EVENT_TRANSPORT: 
             {
                 // const clap_event_transport_t *ev = (const clap_event_transport_t *)hdr;
-                std::cerr << "TODO: handle transport event\n";
+                std::cerr << "FluidSynth.clap TODO: handle transport event\n";
                 break;
             }
 
@@ -284,11 +383,13 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
                         int lsb = ev->data[1] & 0x7F;
                         int msb = ev->data[2] & 0x7F;
                         int pitchbend = lsb + (msb << 7);
+                        // std::cerr << "FluidSynth.clap MIDI pitch bend " 
+                        //   << chan << " " << pitchbend << "\n";
                         fluid_synth_pitch_bend(m_synth, chan, pitchbend);
                     }
                     break;
                 default:
-                    std::cout << "TODO: handle MIDI event 0x" 
+                    std::cout << "FluidSynth.clap TODO: handle MIDI event 0x" 
                         << std::setfill('0') << std::setw(2)
                         << std::hex << (int) ev->data[0] 
                         << (int) ev->data[1] 
@@ -301,14 +402,14 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
         case CLAP_EVENT_MIDI_SYSEX: 
             {
                 // const clap_event_midi_sysex_t *ev = (const clap_event_midi_sysex_t *)hdr;
-                std::cerr << "TODO: handle MIDI sysex event\n";
+                std::cerr << "FluidSynth.clap TODO: handle MIDI sysex event\n";
                 break;
             }
 
         case CLAP_EVENT_MIDI2: 
             {
                 // const clap_event_midi2_t *ev = (const clap_event_midi2_t *)hdr;
-                std::cerr << "TODO: handle MIDI2 event\n";
+                std::cerr << "FluidSynth.clap TODO: handle MIDI2 event\n";
                 break;
             }
         }
@@ -318,19 +419,23 @@ FluidsynthPlugin::processEvent(const clap_event_header_t *hdr)
 void 
 FluidsynthPlugin::reset() noexcept 
 {
-    std::cerr << "fluid reset\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid reset\n";
 }
 
 void 
 FluidsynthPlugin::onMainThread() noexcept
 {
-    std::cerr << "on main thread\n";
+    if(m_verbosity > 0)
+        std::cerr << "fluid on main thread\n";
 }
 
 const void *
 FluidsynthPlugin::extension(const char *id) noexcept
 {
-    // last-case handler for extensions
+    // last-chance handler for extensions
+    if(m_verbosity > 0)
+        std::cerr << "fluid extension " << id << "\n";
     return nullptr;
 }
 
@@ -531,7 +636,92 @@ FluidsynthPlugin::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
 bool 
 FluidsynthPlugin::paramsValue(clap_id paramid, double *value) noexcept
 {
-    *value = m_paramValues[paramid];
+    if(!m_synth)
+    {
+        *value = m_paramValues[paramid];
+        return true;
+    }
+    if(paramid == k_Gain)
+        *value = m_gain;
+    else
+    if(paramid <= k_RevLevel)
+    {
+        switch(paramid)
+        {
+        case k_Reverb: // on-off
+            *value = 1; // fluid_synth_get_reverb_on(m_synth);
+            break; 
+        case k_RevRoomsize: // 0-1.2
+            fluid_synth_get_reverb_group_roomsize(m_synth, -1, value);
+            break; 
+        case k_RevDamping:  // 0-1
+            fluid_synth_get_reverb_group_damp(m_synth, -1, value);
+            break; 
+        case k_RevWidth:    // 0-100
+            fluid_synth_get_reverb_group_width(m_synth, -1, value);
+            break; 
+        case k_RevLevel:
+            fluid_synth_get_reverb_group_level(m_synth, 1, value);
+            break;
+        default:
+            assert(0);
+        }
+    }
+    else
+    if(paramid <= k_ChorusMod)
+    {
+        switch(paramid)
+        {
+        case k_Chorus: // on-off
+            *value = 1; // fluid_synth_get_reverb_on(m_synth);
+            break;
+        case k_ChorusNR: // 0-99, voice-count
+            {
+                int nr;
+                fluid_synth_get_chorus_group_nr(m_synth, -1, &nr);
+                *value = nr;
+            }
+            break;
+        case k_ChorusLevel: // 0-1
+            fluid_synth_get_chorus_group_level(m_synth, -1, value);
+            break;
+        case k_ChorusSpeed: // Hz (.29 - 5)
+            fluid_synth_get_chorus_group_speed(m_synth, -1, value);
+            break;
+        case k_ChorusDepth: // ms (0 - 21)
+            fluid_synth_get_chorus_group_depth(m_synth, -1, value);
+            break;
+        case k_ChorusMod:  // sine or triangle
+            {
+                int i;
+                fluid_synth_get_chorus_group_type(m_synth, -1, &i);
+                *value = i;
+            }
+            break;
+        default:
+            assert(0);
+        }
+    }
+    else
+    {
+        if(m_synth)
+        {
+            int chan;
+            if(paramid >= k_Bank0)
+                chan = paramid - k_Bank0;
+            else
+                chan = paramid - k_Prog0;
+            
+            int fontId, bank, prog;
+            fluid_synth_get_program(m_synth, chan, &fontId, &bank, &prog);
+            if(paramid >= k_Bank0)
+                *value = bank;
+            else
+                *value = prog;
+        }
+        else
+            *value = 0;
+    }
     return true;
 }
 
@@ -665,11 +855,19 @@ bool
 FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
     const char *location, const char *load_key) noexcept
 {
-    if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE)
+    // spec says this is invoked in main thread.
+    // std::cerr << "fluidsynth.clap loadPreset " << location << "\n";
+    if(location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE || true)
     {
+        char buf[2048];
+        m_sfontReq = location;
         std::filesystem::path fp(location);
         std::string tmp;
-        if(!std::filesystem::exists(fp) && fp.is_relative())
+        bool found = false;
+        if(std::filesystem::exists(fp))
+            found = true; 
+        else
+        if(fp.is_relative())
         {
             // try our default locations 
             for(auto x : m_pluginPresetDirs)
@@ -679,27 +877,36 @@ FluidsynthPlugin::presetLoadFromLocation(uint32_t location_kind,
                 {
                     tmp = nfp.generic_string();
                     location = tmp.c_str();
+                    found = true;
                     break;
                 }
             }
         }
-        int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
-        if(id == FLUID_FAILED)
+        if(found)
         {
-            std::cerr << "fluidsynth can't load " << location << "\n";
-            return false;
-        }
+            int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
+            if(id != FLUID_FAILED)
+            {
+                snprintf(buf, sizeof(buf), "fluidsynth loaded %s", m_sfontReq.c_str());
+                m_sfontPath = location;
+                if(m_fontId != -1)
+                    fluid_synth_sfunload(m_synth, m_fontId, 1);
+                m_fontId = id;
+                if(_host.canUsePresetLoad())
+                    _host.presetLoadLoaded(location_kind, location, load_key);
+                else
+                    _host.log(CLAP_LOG_INFO, buf);
+                return true;
+            }
+        } // fallthrough on error
+        snprintf(buf, sizeof(buf), "fluidsynth ERROR can't load %s", location);
+        _host.log(CLAP_LOG_WARNING, buf);
+        if(_host.canUsePresetLoad())
+            _host.presetLoadOnError(location_kind, location, load_key, -1, buf);
         else
-        {
-            if(m_verbosity)
-                std::cerr << "fluidsynth loaded " << location << "\n";
-            m_sfontPath = location;
-            m_fontId = id;
-            return true;
-        }
+            _host.log(CLAP_LOG_WARNING, buf);
     }
-    else
-        return false;
+    return false;
 }
 
 #define ckIOError(x)  if(x == -1) return false
@@ -712,84 +919,121 @@ FluidsynthPlugin::stateSave(const clap_ostream *stream) noexcept
     // stash the current soundfont path, gain and 16 prog/bank values
     // \n separates the 18 values.
 
-    std::string sfpath;
-    uint16_t vers = k_newStateVersion;
-    if(m_sfontPath.filename().generic_string() == "default.sf2")
-        sfpath = "default.sf2";
-    else
-        sfpath = m_sfontPath.generic_string();
+    // uint16_t vers = k_newStateVersion;
 
-    char buf[8];
-    strcpy(buf, "FSPG");
-    memcpy(buf+5, &vers, 2);
-    buf[7] = '\n';
-    ckIOError(stream->write(stream,buf, 8));
+    std::stringstream sstr;
+    sstr << "{\"$schema\": \"fluidsynth.clap/v1\", "
+         << "\"sf\": \"" << m_sfontReq << "\", "
+         << "\"params\": {";
+    
+    double value;
+    for(int i=0;i<k_indexedParamCount;i++)
+    {
+        if(i != 0) sstr << ", ";
 
-    ckIOError(stream->write(stream, sfpath.c_str(), sfpath.size()));
-    ckIOError(stream->write(stream, "\n", 1));
+        this->paramsValue(i, &value);
+        clap_param_info &info = s_fluidParams[i];
+        sstr << "\"" << info.name 
+             << "\": { \"id\":" << i 
+             << ", \"value\": " << value;
 
-    ckIOError(stream->write(stream, &m_gain, sizeof(m_gain)));
-    ckIOError(stream->write(stream, "\n", 1));
+        sstr << ", \"range\": [" << info.min_value << "," 
+                                 << info.max_value;
+        if(info.flags & CLAP_PARAM_IS_STEPPED) sstr << ", 1";
+        sstr << "]";
 
-    // todo: effects parameters
+        sstr << "}";
+    }
+    sstr << "}, ";
 
-    int fontId; // ignored, currently we keep the same font for all channels
-    int bank, prog;
-    char bp[3];
-    bp[2] = '\n';
+    this->paramsValue(k_Prog0, &value);
+    sstr << "\"prog0\": { \"id\":" << k_Prog0 
+          << ", \"value\":" << int(value) << ", \"range\": [0, 127, 1]}, ";
+
+    this->paramsValue(k_Bank0, &value);
+    sstr << "\"bank0\": { \"id\":" << k_Bank0 
+          << ", \"value\":" << int(value) << ", \"range\": [0, 127, 1]}, ";
+    
+    sstr << "\"programs\": [ ";
+    int fontId, bank, prog;
     for(int i=0;i<16;i++)
     {
         fluid_synth_get_program(m_synth, i, &fontId, &bank, &prog);
-        bp[0] = (char) bank;
-        bp[1] = (char) prog;
-        ckIOError(stream->write(stream, bp, 3));
+        if(i > 0) sstr << ", ";
+        sstr << "[" << bank << "," << prog << "]";
     }
+    sstr << "], \"voices\":";
+    this->serializeVoiceNames(sstr);
+    sstr << "}";
+
+    std::string s = sstr.str();
+    ckIOError(stream->write(stream, s.c_str(), s.size()));
+
+    // std::cerr << s << "\n"; // to debug json
     return true;
 }
 
 bool 
 FluidsynthPlugin::stateLoad(const clap_istream *stream) noexcept
 {
-    std::string sfpath;
-    float gain;
-    char buf[8];
-    ckIOError(stream->read(stream, buf, 8));
-    if(strcmp(buf, "FSPG") != 0)
-    {
-        std::cerr << "FluidsynthPlugin found bogus state\n";
-        return false;
-    }
+    std::string json;
+    char ibuf[1024];
+    int64_t nbytes;
 
-    uint16_t vers;
-    memcpy(&vers, buf+5, 2);
+    do {
+        nbytes = stream->read(stream, ibuf, 1024);
+        json.append(ibuf, nbytes);
+    } while(nbytes > 0);
+    ckIOError(nbytes);
 
-    if(vers > k_newStateVersion)
-    {
-        std::cerr << "FluidsynthPlugin found futuristic state (ignored)\n";
-        return false;
-    }
-
-    while(1 == stream->read(stream, buf, 1) && buf[0] != '\n')
-        sfpath.push_back(buf[0]);
-
+    RSJresource parser(json);
+    std::string schema = parser["$schema"].as<std::string>();
+    std::string sfpath = parser["sf"].as<std::string>();
     char const *location = sfpath.c_str();
     int id = fluid_synth_sfload(m_synth,  location, 1/*reset*/);
-    if(id == FLUID_FAILED)
+    if(id == FLUID_OK)
+    {
+        if(m_fontId != -1)
+            fluid_synth_sfunload(m_synth, m_fontId, 1);
+        m_fontId = id;
+    }
+    else
     {
         std::cerr << "fluidsynth can't load " << location << "\n";
         return false;
     }
-    else
-        m_fontId = id;
-    ckIOError(stream->read(stream, (char *) &gain, sizeof(gain)));
-    m_gain = gain;
-    ckIOError(stream->read(stream, buf, 1)); // newline
+    m_gain = (float) parser["gain"].as<double>(m_gain); // parser doesn't know float
+    // more params here...
 
-    for(int i=0;i<16;i++)
+    int i=0;
+    for(auto it=parser["programs"].as_array().begin(); 
+             it!=parser["programs"].as_array().end(); ++it)
     {
-        ckIOError(stream->read(stream, buf,  3));
-        fluid_synth_program_select(m_synth, i, m_fontId,
-                                    buf[0], buf[1]);
+
+        int bank, prog;
+        bank = it->as_array()[0].as<int>();
+        prog = it->as_array()[1].as<int>();
+        fluid_synth_program_select(m_synth, i++, m_fontId, bank, prog);
     }
     return true;
+}
+
+void
+FluidsynthPlugin::serializeVoiceNames(std::stringstream &sstr)
+{
+    fluid_sfont_t* sfont = fluid_synth_get_sfont_by_id(m_synth, m_fontId);
+    fluid_sfont_iteration_start(sfont);
+    sstr << "[\n";
+    int i=0;
+    for(fluid_preset_t* preset = fluid_sfont_iteration_next(sfont);
+        preset != nullptr; preset = fluid_sfont_iteration_next(sfont)) 
+    {
+        int bankNum = fluid_preset_get_banknum(preset);
+        int progNum = fluid_preset_get_num(preset);
+        if(i++ > 0) sstr << ",";
+        sstr << "{ \"b\":" << bankNum << ",";
+        sstr << " \"p\":" << progNum <<  ",";
+        sstr << " \"nm\": \"" << fluid_preset_get_name(preset) << "\" }";
+    }
+    sstr << "]";
 }

@@ -7,3 +7,6 @@
 [submodule "fluidsynth"]
 	path = fluidsynth
 	url = https://github.com/FluidSynth/fluidsynth
+[submodule "choc"]
+	path = choc
+	url = https://github.com/cannerycoders/choc

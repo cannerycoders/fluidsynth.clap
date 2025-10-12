@@ -21,9 +21,12 @@
 
 ## intro
 
-`FluidSynth.clap` is a simple, open source, "headless" (no GUI) bridge to 
+<center><img src="FluidSynth.clap.GUI.png"></center>
+
+`FluidSynth.clap` is a simple, open source bridge to 
 the [fluidsynth soundfont synthesizer](https://fluidsynth.org) in the 
 form of a [CLAP plugin](https://github.com/free-audio/clap).
+
 
 ## install with fluidsynth
 
@@ -85,7 +88,7 @@ perfectly portable.
 In typical usage, `fluidsynth` exposes a large collection of "canned" instrument
 sounds that are selected by the instrument index. Thus, very little user-interface
 is required. Just select instrument/bank indices in your sound font. Most CLAP
-hosts offer a stripped-down parameter editing interface which should suffice to
+hosts offer a stripped-down parameter editing interface which may suffice to
 select different gain and program settings.
 
 The [General Midi standard](https://cannerycoders.com/docs/fiddle/reference/midiGM1.html)
@@ -202,7 +205,7 @@ external DLL dependencies.
 This requires that you install [homebrew](https://brew.sh).
 
 ```sh
-brew install fluidsynth`
+brew install fluidsynth
 ```
 
 ## implementation notes

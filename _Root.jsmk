@@ -1,17 +1,27 @@
 /**
+ * 3/25 summary
+ *   - this project and _LibFluidSynth.jsmk have vestigial
+ *     details about building fluidsynth from src.
+ *   - windows relies on _prebuilt libraries from fluidsynth.org and github
+ *   - mac relied on homebrew to deliver libfluidsynth.a
+ *     but that brings in readline and 
+ *   - linux is "up-in-the-air": could simply require apt-get install unless
+ *     we need the latest and greatest builds.
+ *
  * Our clap plugin is a single dso/dll that has dependencies on one or more
  * other dsos.  Our plugin package combines these all into a platform-specifi
  * subdirectory structure.
  * 
  *  Windows, Linux:
- *     fluidsynth.clap/  <-- a directory
- *          fluidsynth.clap <--- the real clap plugin
+ *     FluidSynth.clap/  <-- a directory
+ *          FluidSynth.clap <--- the real clap plugin
  *          libfluidsynth-3.dll <-- the real fluidsynth
- *          libglib-2.0-0.dll <-- example of libfluidsynth-3 dependency
+ *          --- libfluidsysnth dependencies: 
+ *              DSOUND.dll, ... sndfile.dll, etc
  *          ....
  *          README.md, LICENSE, etc
  *  MacOS:
- *     fluidsynth.clap/  <-- a directory/bundle
+ *     FluidSynth.clap/  <-- a directory/bundle
  *          Contents/
  *          MacOS/
  *              fluidsynth <-- the real clap plugin (shouldn't include .clap)
@@ -25,6 +35,7 @@ let pkgj = jsmk.file.read(jsmk.path.join(Project.ProjectDir, "package.json"));
 let pkg = JSON.parse(pkgj);
 let appName = pkg.label;
 let appVers = pkg.version;
+let tsName = jsmk.GetActiveToolset().Name;
 
 Project.EstablishDomain(appName, /(vs|gcc|clang)/,
 {
@@ -54,35 +65,85 @@ Project.Define({
 }[process.platform]);
 
 let platform = process.platform;
+let sfInstallDir = null;
+let hzBuild = Project.GetBuildVar("BUILDCLIENT") == "Hz";
+
+if(hzBuild)
+{
+    // this would point to eg: App-1.0 or App-1.0/App.app
+    Project.SetBuildVar("InstallDir", Project.GetBuildVar("PLUGIN_INSTALL"));
+    sfInstallDir = Project.GetBuildVar("SOUNDFONT_INSTALL");
+};
 let installRoot = Project.EvaluateBuildVar("InstallDir");
 
-let fpkg = {
-    win32: "_prebuilt/fluidsynth-2.3.3-win10-x64",
-    linux: "_prebuilt/fluidsynth-2.3.3-linux-x64",
-    darwin: "/opt/homebrew",
-    // win32: "_prebuilt/fluidsynth-dev-win10-x64"
+if(platform == "darwin")
+    console.log("fluidsynth MacOS installRoot: " + installRoot);
+
+let hroot = "/opt/homebrew";
+let fluidVers = "2.4.2";
+let hcel = `${hroot}/Cellar`;
+let [fpkg, flib] = {
+    win32: [`_prebuilt/fluidsynth-${fluidVers}-win10-x64`, `_prebuilt/fluidsynth-${fluidVers}-win10-x64/lib`],
+    darwin: [hroot, `${hroot}/lib`],
+    linux: ["", ""],
 }[platform];
-let fluidSearchpaths = [`${fpkg}/include`];
+
+let fluidSearchpaths = {
+    win32: [`${fpkg}/include`],
+    darwin: [`${fpkg}/include`],
+    linuc: ["/usr/include"],
+}[platform];
+
 let fluidLibs = 
 {
-    win32: [`${fpkg}/lib/libfluidsynth.dll.a`],
-    linux: [`${fpkg}/lib/libfluidsynth.so.3`],
-    darwin: [],
+    win32: [`${flib}/libfluidsynth.dll.a`],
+    darwin: [
+         `${flib}/libfluidsynth.a`,
+        `${flib}/libportaudio.a`,
+        `${flib}/libsndfile.a`,
+        `${flib}/libvorbis.a`, 
+        `${flib}/libvorbisenc.a`, 
+        `${flib}/libogg.a`, 
+        `${flib}/libopus.a`, 
+        `${flib}/libmp3lame.a`, 
+        `${flib}/libmpg123.a`, 
+        `${flib}/libflac.a`, 
+        `${flib}/libglib-2.0.a`,
+        `${flib}/libintl.a`,
+        `${hcel}/readline/8.3.1/lib/libreadline.a`,
+        `${hcel}/ncurses/6.5/lib/libncurses.a`,
+        "-liconv"
+        ],
+    linux: [], // WIP
 }[platform];
 
-let fluidModules =
-{
-    darwin: ["libfluidsynth"]
+let fluidFrameworks = {
+    win32: [], 
+    darwin: [
+        "AudioUnit", "CoreAudio", "AudioToolbox", "CoreMIDI", "CoreFoundation", "IOKit",
+        "Carbon", "AppKit", "Foundation"
+    ],
+    linux: [], 
 }[platform];
 
-
-if(platform == "darwin") // see build/*/notes.md
+let guiLibs =
 {
-    Project.NewProject("libfluidsynthProj", {
-        ProjectDir: "fluidsynth/src",
-        ProjectFilePath: "_LibFluidSynth.jsmk",
-    }).EstablishBarrier("after");
+    win32: [
+        "dwmapi.lib",
+        "kernel32.lib",
+        "shell32.lib",
+        "ole32.lib",
+        "user32.lib",
+    ],
+}[platform];
+
+if(platform == "win32" && tsName == "clang")
+{
+    guiLibs = guiLibs.map(v => `-l${jsmk.path.basename(v)}`);
 }
+
+// this may do nothing.. (ie: see notes therein).
+Project.NewProject("libfluidsynth").EstablishBarrier("after");
 
 let m = Project.NewModule(appName);
 let defs = {
@@ -99,36 +160,74 @@ let t1 = m.NewTask("compile", "cpp->o",
         `clap/include`,
         `clap-helpers/include`,
         ...fluidSearchpaths,
+        ".", // for choc
+        `../clap/include`,
+        `../clap-helpers/include`,
     ],
 });
 
-// jsmk.WARNING(`fluidModules: ${fluidModules} ${platform}`);
 // NB: name of task is depended upon during install+renaming.
 // NB2: the name of the install dir is governed by package.json (see top)
 let linkflags = {
-    darwin: [],
+    darwin: [["-L",`${fpkg}/lib`]], // -L only works for -lmylib
     win32: [],
     linux: ["-Wl,-rpath=$ORIGIN"]
+}[platform];
+
+let frameworks = {
+  darwin: ["AudioUnit", "AudioToolbox", "CoreAudio", "CoreMIDI", "CoreFoundation", "IOKit",
+           "Carbon", "AppKit", "Foundation"],
+  win32: [],
+  linux: [],
 }[platform];
 
 let t2 = m.NewTask("FluidSynth", "cpp.o->so", {
     inputs: t1.GetOutputs(),
     deps: fluidLibs,
-    modules: fluidModules,
     flags: linkflags,
+    libs: guiLibs,
+    frameworks: fluidFrameworks,
+    buildvars: {VERSION: fluidVers}
+});
+
+let installPrefix = "/";
+// if(hzBuild)
+// {
+//     installPrefix = {
+//         "win32": "",
+//         "linux": "",
+//         "darwin": "FluidSynth.clap/",
+//     }[platform];
+// }
+
+m.NewTask("installWebview", "install", 
+{
+    inputs: Project.Glob("src/webview/*"),
+    installdir: platform == "darwin" ? 
+                `${installPrefix}Contents/Resources/webview` : 
+                `${installPrefix}webview`
 });
 
 switch(platform)
 {
 case "linux":
+    {
+        let ts = jsmk.GetActiveToolset().GetHandle();
+        m.NewTask("installPlug", "install", {
+            inputs: t2.GetOutputs(), 
+            installext: ".clap", // <----- need separate rule for other files
+            installdir: installPrefix
+        });
+    }
+    break;
 case "win32":
     {
         let ts = jsmk.GetActiveToolset().GetHandle();
-        let dsoGlob = (platform == "linux") ? "lib/*so*" : "bin/*.dll";
+        let dsoGlob = "bin/*.dll";
         m.NewTask("installPlug", "install", {
             inputs: t2.GetOutputs(), 
             installext: ".clap", // <--------- need separate rule for other files
-            installdir: "/"
+            installdir: installPrefix,
         });
         /* windows dlls can be downloaded from fluidsynth github */
         m.NewTask("installDLLs", "install", {
@@ -140,67 +239,97 @@ case "win32":
             inputs: ["README.md", "LICENSE", "BUILD.json", "licenses"],
             installdir: "etc",
         });
-        /* finally, we zip ------------------------------- */
-        let zipfile = `${appName}.${ts}.zip`;
-        m.NewTask("fluidsynthPackage", "packagescript", {
-            ARGUMENTS: ["build/zipdir.js", installRoot,
-                jsmk.path.join(installRoot, "..", zipfile)]
-        });
+        if(!hzBuild)
+        {
+            /* finally, we zip (during package) -------------- */
+            let zipfile = `${appName}.${ts}.zip`;
+            m.NewTask("fluidsynthPackage", "packagescript", {
+                ARGUMENTS: ["build/zipdir.js", installRoot,
+                    jsmk.path.join(installRoot, "..", zipfile)]
+            });
+        }
+        else
+        {
+            jsmk.NOTICE("Building fluidsynth for Hz");
+        }
     }
     break;
 case "darwin":
     // We only perform copy/fixup of dlls during the packaging phase.
     // This is because the stripping overlaps with the required signing.
     {
-        let binDir = "Contents/MacOS";
-        let resourcesDir = "Contents/Resources";
-        let tcpy = m.NewTask("installPlug", "install", {
-            inputs: t2.GetOutputs(), 
-            installext: "", // <--------- need separate rule for other files
-            installdir: binDir,
-        });
-        /* no frameworks atm, statically linked 
-        m.NewTask("packageDLLs", "installscript", {
-            ARGUMENTS: ["build/fixupDLLs.js",
-                 jsmk.path.join(installRoot, frameworksDir), 
-                 ...tcpy.GetOutputs()
+        let binDir = `${installPrefix}Contents/MacOS`;
+        let resourcesDir = `${installPrefix}Contents/Resources`;
+        if(hzBuild)
+        {
+            // copy to target, let client handle fixupDLL, notarizing, packaging
+            m.NewTask("installPlug", "install", {
+                inputs: t2.GetOutputs(), 
+                installext: "", // <--------- need separate rule for other files
+                installdir: binDir,
+            });
+        }
+        else
+        {
+            let binDir = "Contents/MacOS";
+            let resourcesDir = "Contents/Resources";
+            m.NewTask("installPlug", "install", {
+                inputs: t2.GetOutputs(), 
+                installext: "", // <--------- need separate rule for other files
+                installdir: binDir,
+            });
+            /* no frameworks atm, statically linked  
+             * still nice to fixup our dll's rpath.
+            m.NewTask("packageDLLs", "installscript", {
+                ARGUMENTS: ["build/fixupDLLs.js",
+                    jsmk.path.join(installRoot, frameworksDir), 
+                    ...tcpy.GetOutputs()
+                    ]
+                })
+            */
+            m.NewTask("installPkg", "install", {
+                inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
+                installdir: `${installPrefix}Contents`
+            });
+            m.NewTask("installLegal", "install", {
+                inputs: ["README.md", "LICENSE", "BUILD.json", "licenses", "build/darwin/clap.icns"],
+                installdir: resourcesDir,
+            });
+            // https://developer.apple.com/forums/thread/130855
+            //  -- only sign binaries
+            //  -- only apply entitlements to apps
+            m.NewTask("osxsign", "packagescript",
+            {
+                ARGUMENTS: [
+                    "build/darwin/osxsign.js", installPrefix
                 ]
-            })
-        */
-        m.NewTask("installPkg", "install", {
-            inputs: ["build/darwin/Info.plist", "build/darwin/PkgInfo"],
-            installdir: "Contents"
-        });
-        m.NewTask("installLegal", "install", {
-            inputs: ["README.md", "LICENSE", "BUILD.json", "licenses", "build/darwin/clap.icns"],
-            installdir: resourcesDir,
-        });
-        // https://developer.apple.com/forums/thread/130855
-        //  -- only sign binaries
-        //  -- only apply entitlements to apps
-        m.NewTask("osxsign", "packagescript",
-        {
-            ARGUMENTS: [
-                "build/darwin/osxsign.js", installRoot,
-            ]
-        });
+            });
 
-        let ts = jsmk.GetActiveToolset().GetHandle();
-        let dmgExt = `.${ts}.dmg`;
-        m.NewTask("osxdmg", "packagescript", 
-        {
-            ARGUMENTS: [
-                "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", 
-                installRoot+dmgExt
-            ]
-        });
-        
-        m.NewTask("osxnotarize", "repositscript",
-        {
-            ARGUMENTS: [
-                "build/darwin/osxnotarize.js", installRoot+dmgExt
-            ]
-        });
+            let ts = jsmk.GetActiveToolset().GetHandle();
+            let dmgExt = `.${ts}.dmg`;
+            m.NewTask("osxdmg", "packagescript", 
+            {
+                ARGUMENTS: [
+                    "build/darwin/osxpackage.js", "FluidSynth.clap", installRoot, "build/darwin/Help.rtf", 
+                    installRoot+dmgExt
+                ]
+            });
+            
+            m.NewTask("osxnotarize", "repositscript",
+            {
+                ARGUMENTS: [
+                    "build/darwin/osxnotarize.js", installPrefix+dmgExt
+                ]
+            });
+        }
     }
     break;
+}
+
+if(sfInstallDir)
+{
+    m.NewTask("installSoundfont", "install", {
+        inputs: Project.Glob("sf2/*"),
+        installdir: sfInstallDir
+    });
 }

@@ -5,9 +5,11 @@ _prebuilt/
 _install/
 _package/
 _released/
+_dist/
 */_built/
 */_install/
 */_released/
 .ignore/
 .DS_Store
 BUILD.json
+dist/
